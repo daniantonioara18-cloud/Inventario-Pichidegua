@@ -1,0 +1,165 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Items</h2>
+    <small class="text-muted">Listado del inventario</small>
+  </div>
+
+  <button class="btn btn-success" (click)="openCreateModal()">
+    <i class="bi bi-plus-circle me-2"></i> Agregar item
+  </button>
+</div>
+
+<!-- alertas -->
+<div *ngIf="successMsg" class="alert alert-success py-2">{{ successMsg }}</div>
+<div *ngIf="errorItems" class="alert alert-danger py-2">{{ errorItems }}</div>
+<div *ngIf="errorCatalogs" class="alert alert-warning py-2">{{ errorCatalogs }}</div>
+
+<!-- tabla -->
+<div class="card">
+  <div class="card-body">
+    <div *ngIf="loadingItems" class="text-muted">Cargando...</div>
+
+    <div class="table-responsive" *ngIf="!loadingItems">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Modelo</th>
+            <th>Marca</th>
+            <th>Subcategoría</th>
+            <th>Área</th>
+            <th class="text-end">Activo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of items">
+            <td>{{ it.id_item }}</td>
+            <td class="fw-semibold">{{ it.codigo_interno }}</td>
+            <td>{{ it.nombre }}</td>
+            <td>{{ it.modelo || '-' }}</td>
+            <td>{{ it.marca || '-' }}</td>
+            <td>{{ it.subcategoria || '-' }}</td>
+            <td>{{ it.area_actual || '-' }}</td>
+            <td class="text-end">
+              <span class="badge bg-success" *ngIf="it.activo">Sí</span>
+              <span class="badge bg-secondary" *ngIf="!it.activo">No</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div *ngIf="showCreateModal" class="modal-backdrop-custom">
+  <div class="modal-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Crear nuevo item</h5>
+      <button class="btn btn-light btn-sm" (click)="closeCreateModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div *ngIf="loadingCatalogs" class="text-muted mb-3">Cargando catálogos…</div>
+
+    <form (ngSubmit)="create()" *ngIf="!loadingCatalogs">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Código interno *</label>
+          <input class="form-control" [(ngModel)]="form.codigo_interno" name="codigo_interno" required />
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Nombre *</label>
+          <input class="form-control" [(ngModel)]="form.nombre" name="nombre" required />
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Modelo</label>
+          <input class="form-control" [(ngModel)]="form.modelo" name="modelo" />
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Descripción</label>
+          <input class="form-control" [(ngModel)]="form.descripcion" name="descripcion" />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Vida útil (meses)</label>
+          <input type="number" class="form-control" [(ngModel)]="form.vida_util_meses" name="vida_util_meses" min="0" />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Condición</label>
+          <select class="form-select" [(ngModel)]="form.condicion_fisica" name="condicion_fisica">
+            <option value="Nuevo">Nuevo</option>
+            <option value="Bueno">Bueno</option>
+            <option value="Regular">Regular</option>
+            <option value="Malo">Malo</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Activo</label>
+          <select class="form-select" [(ngModel)]="form.activo" name="activo">
+            <option [ngValue]="true">Sí</option>
+            <option [ngValue]="false">No</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Subcategoría *</label>
+          <select class="form-select" [(ngModel)]="form.id_subcategoria" name="id_subcategoria" required>
+            <option [ngValue]="null">-- Selecciona --</option>
+            <option *ngFor="let sc of catalogos.subcategorias" [ngValue]="sc.id_subcategoria">
+              {{ sc.categoria }} - {{ sc.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Marca</label>
+          <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
+            <option [ngValue]="null">-- (sin marca) --</option>
+            <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">
+              {{ m.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Modo adquisición</label>
+          <select class="form-select" [(ngModel)]="form.id_adquisicion" name="id_adquisicion">
+            <option [ngValue]="null">-- (sin dato) --</option>
+            <option *ngFor="let a of catalogos.adquisiciones" [ngValue]="a.id_adquisicion">
+              {{ a.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Área actual</label>
+          <select class="form-select" [(ngModel)]="form.id_area_actual" name="id_area_actual">
+            <option [ngValue]="null">-- (sin custodia) --</option>
+            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
+              {{ a.nombre }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeCreateModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-success" [disabled]="creating">
+          {{ creating ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

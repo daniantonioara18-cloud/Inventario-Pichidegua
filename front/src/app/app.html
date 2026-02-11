@@ -1,0 +1,15 @@
+<app-navbar></app-navbar>
+
+<div class="container-fluid">
+  <div class="row" style="min-height: calc(100vh - 56px);">
+    <aside class="col-12 col-md-3 col-lg-2 p-0 border-end">
+      <app-sidebar></app-sidebar>
+    </aside>
+
+    <main class="col-12 col-md-9 col-lg-10 py-4">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<app-footer></app-footer>
