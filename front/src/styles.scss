@@ -1,8 +1,82 @@
-/* You can add global styles to this file, and also import other style files */
+/* front/src/styles.scss */
+
+/* 1. Importaciones obligatorias */
 @import "bootstrap/dist/css/bootstrap.min.css";
 @import "bootstrap-icons/font/bootstrap-icons.css";
 
-/* opcional: fondo general */
+/* 2. Variables de Diseño (Tu identidad) */
+:root {
+  --muni-primary: #0c6994;       /* Verde oficial */
+  --muni-dark: #6b0808;          /* Verde oscuro para hover */
+  --muni-light: #e6f7f2;         /* Verde muy suave para fondos activos */
+  --header-height: 64px;         /* Altura fija del navbar */
+  --sidebar-width: 260px;        /* Ancho fijo del sidebar */
+  --bg-body: #f3f4f6;            /* Gris moderno para el fondo de la app */
+  --text-primary: #20253c;       /* Color de texto principal */
+}
+
+/* 3. Estilos Base */
 body {
-  background: #f6f7f9;
+  background-color: var(--bg-body);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+  overflow-x: hidden; /* Evita scroll horizontal */
+}
+
+/* 4. CLASES DE LAYOUT (La clave para que no se vea mal) */
+
+/* El Navbar siempre arriba y con sombra */
+.layout-navbar {
+  height: var(--header-height);
+  background-color: var(--muni-primary);
+  z-index: 1050; /* Por encima de todo */
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* El Sidebar fijo a la izquierda */
+.layout-sidebar {
+  width: var(--sidebar-width);
+  height: 100vh; /* Ocupa toda la altura */
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding-top: var(--header-height); /* Deja espacio para el navbar */
+  background-color: #ffffff;
+  border-right: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 2px 0 10px rgba(0,0,0,0.03); /* Sombra sutil a la derecha */
+  z-index: 1040; /* Debajo del navbar */
+  overflow-y: auto; /* Scroll si el menú es muy largo */
+}
+
+/* El Contenido Principal */
+.layout-content {
+  margin-left: var(--sidebar-width); /* Deja espacio al menú izquierdo */
+  
+  /* CORRECCIÓN CRÍTICA: */
+  /* Sumamos la altura del Navbar (64px) + un espacio de respiro (30px) */
+  padding-top: calc(var(--header-height) + 2rem); 
+  
+  /* Padding a los lados y abajo */
+  padding-right: 2rem;
+  padding-bottom: 2rem;
+  padding-left: 2rem;
+
+  /* Asegura que el footer siempre se empuje al final si hay poco contenido */
+  min-height: 100vh; 
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Esto ayuda a que el footer baje */
+}
+
+/* En móviles, quitamos el margen del sidebar */
+@media (max-width: 992px) {
+  .layout-sidebar { display: none; } /* Ocultamos sidebar en móvil por ahora */
+  .layout-content { margin-left: 0; } /* Contenido ocupa todo el ancho */
+}
+
+.active-menu {
+  background-color: var(--muni-light) !important;
+  color: var(--muni-primary) !important;
+  font-weight: 600;
+  i { color: var(--muni-primary); }
 }
