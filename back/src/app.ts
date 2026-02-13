@@ -1,23 +1,28 @@
 import express from 'express';
 import cors from 'cors';
-import healthRoutes from './routes/health.routes';
-import dbRoutes from './routes/db.routes';
-import itemsRoutes from './routes/items.routes';
-import catalogsRoutes from './routes/catalogs.routes';
+import morgan from 'morgan';
+
+import apiRouter from './routes';
+import { env } from './config/env';
+import { notFound } from './middlewares/notFound';
+import { errorHandler } from './middlewares/errorHandler';
+
 const app = express();
 
+// Middlewares base
+app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 app.use(express.json());
-app.use(cors({ origin: process.env.CLIENT_URL }));
+app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 app.get('/', (_req, res) => {
   res.send('Backend OK ✅ Usa /api/health');
 });
 
-app.use('/api', healthRoutes);
-app.use('/api', dbRoutes);
-app.use('/api',itemsRoutes);
-app.use('/api',catalogsRoutes);
-app.use(express.json());
+// Rutas API
+app.use('/api', apiRouter);
 
+// 404 y errores globales
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;
