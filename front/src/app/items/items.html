@@ -1,165 +1,170 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h2 class="mb-0">Items</h2>
-    <small class="text-muted">Listado del inventario</small>
-  </div>
-
-  <button class="btn btn-success" (click)="openCreateModal()">
-    <i class="bi bi-plus-circle me-2"></i> Agregar item
-  </button>
-</div>
-
-<!-- alertas -->
-<div *ngIf="successMsg" class="alert alert-success py-2">{{ successMsg }}</div>
-<div *ngIf="errorItems" class="alert alert-danger py-2">{{ errorItems }}</div>
-<div *ngIf="errorCatalogs" class="alert alert-warning py-2">{{ errorCatalogs }}</div>
-
-<!-- tabla -->
-<div class="card">
-  <div class="card-body">
-    <div *ngIf="loadingItems" class="text-muted">Cargando...</div>
-
-    <div class="table-responsive" *ngIf="!loadingItems">
-      <table class="table table-hover align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>ID</th>
-            <th>Código</th>
-            <th>Nombre</th>
-            <th>Modelo</th>
-            <th>Marca</th>
-            <th>Subcategoría</th>
-            <th>Área</th>
-            <th class="text-end">Activo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let it of items">
-            <td>{{ it.id_item }}</td>
-            <td class="fw-semibold">{{ it.codigo_interno }}</td>
-            <td>{{ it.nombre }}</td>
-            <td>{{ it.modelo || '-' }}</td>
-            <td>{{ it.marca || '-' }}</td>
-            <td>{{ it.subcategoria || '-' }}</td>
-            <td>{{ it.area_actual || '-' }}</td>
-            <td class="text-end">
-              <span class="badge bg-success" *ngIf="it.activo">Sí</span>
-              <span class="badge bg-secondary" *ngIf="!it.activo">No</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+<div class="container-fluid fade-in">
+  
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold text-secondary">Gestión de Inventario</h4>
+      <small class="text-muted">Visualiza y administra los bienes municipales</small>
     </div>
 
+    <button class="btn btn-success d-flex align-items-center gap-2 shadow-sm px-3" 
+            style="background-color: var(--muni-primary); border: none;"
+            (click)="openCreateModal()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="d-none d-sm-inline">Nuevo Item</span>
+    </button>
   </div>
-</div>
 
-<!-- MODAL -->
-<div *ngIf="showCreateModal" class="modal-backdrop-custom">
-  <div class="modal-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5 class="mb-0">Crear nuevo item</h5>
-      <button class="btn btn-light btn-sm" (click)="closeCreateModal()">
-        <i class="bi bi-x-lg"></i>
-      </button>
+  <div *ngIf="successMsg" class="alert alert-success shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMsg }}
+  </div>
+  <div *ngIf="errorItems" class="alert alert-danger shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorItems }}
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      
+      <div *ngIf="loadingItems" class="text-center py-5 text-muted">
+        <div class="spinner-border text-success mb-2" role="status"></div>
+        <div>Cargando inventario...</div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loadingItems">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="ps-4 py-3 text-secondary text-uppercase small border-0">Código</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Bien</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Categoría</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Detalles</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Estado</th>
+              <th class="text-end pe-4 py-3 text-secondary text-uppercase small border-0">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of items">
+              <td class="ps-4 fw-bold text-primary">{{ item.codigo_interno }}</td>
+              <td>
+                <div class="fw-bold text-dark">{{ item.nombre }}</div>
+                <div class="small text-muted">{{ item.modelo || 'S/M' }}</div>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ item.categoria }}</span>
+                <div class="small text-muted mt-1 ms-1">{{ item.subcategoria }}</div>
+              </td>
+              <td>
+                <div *ngIf="item.serial_tecno"><span class="badge bg-dark font-monospace fw-normal">SN: {{ item.serial_tecno }}</span></div>
+                <div *ngIf="item.material_mueble" class="text-muted small fst-italic"><i class="bi bi-layers me-1"></i>{{ item.material_mueble }}</div>
+                <span *ngIf="!item.serial_tecno && !item.material_mueble" class="text-muted small">-</span>
+              </td>
+              <td>
+                <span class="badge border" [ngClass]="item.activo ? 'bg-success-subtle text-success border-success-subtle' : 'bg-danger-subtle text-danger border-danger-subtle'">
+                  {{ item.activo ? 'Operativo' : 'Baja' }}
+                </span>
+              </td>
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-light text-secondary border hover-shadow" title="Ver Detalle">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="items.length === 0">
+              <td colspan="6" class="text-center py-5 text-muted">No hay items registrados</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <div *ngIf="loadingCatalogs" class="text-muted mb-3">Cargando catálogos…</div>
-
-    <form (ngSubmit)="create()" *ngIf="!loadingCatalogs">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Código interno *</label>
-          <input class="form-control" [(ngModel)]="form.codigo_interno" name="codigo_interno" required />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Nombre *</label>
-          <input class="form-control" [(ngModel)]="form.nombre" name="nombre" required />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Modelo</label>
-          <input class="form-control" [(ngModel)]="form.modelo" name="modelo" />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Descripción</label>
-          <input class="form-control" [(ngModel)]="form.descripcion" name="descripcion" />
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Vida útil (meses)</label>
-          <input type="number" class="form-control" [(ngModel)]="form.vida_util_meses" name="vida_util_meses" min="0" />
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Condición</label>
-          <select class="form-select" [(ngModel)]="form.condicion_fisica" name="condicion_fisica">
-            <option value="Nuevo">Nuevo</option>
-            <option value="Bueno">Bueno</option>
-            <option value="Regular">Regular</option>
-            <option value="Malo">Malo</option>
-          </select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Activo</label>
-          <select class="form-select" [(ngModel)]="form.activo" name="activo">
-            <option [ngValue]="true">Sí</option>
-            <option [ngValue]="false">No</option>
-          </select>
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Subcategoría *</label>
-          <select class="form-select" [(ngModel)]="form.id_subcategoria" name="id_subcategoria" required>
-            <option [ngValue]="null">-- Selecciona --</option>
-            <option *ngFor="let sc of catalogos.subcategorias" [ngValue]="sc.id_subcategoria">
-              {{ sc.categoria }} - {{ sc.nombre }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Marca</label>
-          <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
-            <option [ngValue]="null">-- (sin marca) --</option>
-            <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">
-              {{ m.nombre }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Modo adquisición</label>
-          <select class="form-select" [(ngModel)]="form.id_adquisicion" name="id_adquisicion">
-            <option [ngValue]="null">-- (sin dato) --</option>
-            <option *ngFor="let a of catalogos.adquisiciones" [ngValue]="a.id_adquisicion">
-              {{ a.nombre }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Área actual</label>
-          <select class="form-select" [(ngModel)]="form.id_area_actual" name="id_area_actual">
-            <option [ngValue]="null">-- (sin custodia) --</option>
-            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
-              {{ a.nombre }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="d-flex justify-content-end gap-2 mt-4">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeCreateModal()">
-          Cancelar
-        </button>
-        <button type="submit" class="btn btn-success" [disabled]="creating">
-          {{ creating ? 'Guardando…' : 'Guardar' }}
-        </button>
-      </div>
-    </form>
   </div>
+
+  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
+        
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold text-secondary">Nuevo Item</h5>
+          <button type="button" class="btn-close" (click)="closeCreateModal()"></button>
+        </div>
+
+        <div class="modal-body pt-4">
+          
+          <div *ngIf="loadingCatalogs" class="text-center py-4 text-muted">
+            <div class="spinner-border spinner-border-sm text-success mb-2"></div>
+            <div>Cargando opciones...</div>
+          </div>
+
+          <form (ngSubmit)="create()" *ngIf="!loadingCatalogs">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Código Interno <span class="text-danger">*</span></label>
+                <input class="form-control" [(ngModel)]="form.codigo_interno" name="codigo_interno" placeholder="Ej: TIC-001" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Nombre del Bien <span class="text-danger">*</span></label>
+                <input class="form-control" [(ngModel)]="form.nombre" name="nombre" placeholder="Ej: Notebook HP..." required />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Modelo</label>
+                <input class="form-control" [(ngModel)]="form.modelo" name="modelo" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Marca</label>
+                <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
+                  <option [ngValue]="null">-- Seleccionar --</option>
+                  <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">{{ m.nombre }}</option>
+                </select>
+              </div>
+
+              <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Subcategoría <span class="text-danger">*</span></label>
+                <select class="form-select" [(ngModel)]="form.id_subcategoria" name="id_subcategoria" required>
+                  <option [ngValue]="null">-- Seleccionar Tipo --</option>
+                  <option *ngFor="let sc of catalogos.subcategorias" [ngValue]="sc.id_subcategoria">
+                    {{ sc.categoria }} - {{ sc.nombre }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Descripción</label>
+                <textarea class="form-control" rows="2" [(ngModel)]="form.descripcion" name="descripcion"></textarea>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Condición</label>
+                <select class="form-select" [(ngModel)]="form.condicion_fisica" name="condicion_fisica">
+                  <option value="Nuevo">Nuevo</option>
+                  <option value="Bueno">Bueno</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Malo">Malo</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Vida Útil (Meses)</label>
+                <input type="number" class="form-control" [(ngModel)]="form.vida_util_meses" name="vida_util_meses" />
+              </div>
+            </div>
+
+            <button type="submit" hidden></button>
+          </form>
+        </div>
+
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-light text-secondary" (click)="closeCreateModal()">Cancelar</button>
+          <button type="button" class="btn btn-success text-white px-4" 
+                  (click)="create()" 
+                  [disabled]="creating"
+                  style="background-color: var(--muni-primary);">
+            <span *ngIf="creating" class="spinner-border spinner-border-sm me-2"></span>
+            {{ creating ? 'Guardando...' : 'Guardar Item' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop fade show" *ngIf="showCreateModal"></div>
+
 </div>

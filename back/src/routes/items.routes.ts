@@ -3,38 +3,48 @@ import { pool } from '../config/db';
 
 const router = Router();
 
+
 router.get('/items', async (_req, res) => {
   try {
-    const schema = process.env.DB_SCHEMA || 'inventario';
+    const schema = 'inventario'; 
 
     const sql = `
-      SELECT
+      SELECT 
         i.id_item,
         i.codigo_interno,
         i.nombre,
         i.modelo,
         i.descripcion,
-        i.fecha_ingreso,
         i.condicion_fisica,
         i.activo,
+        
+        -- Traemos nombres legibles de las tablas relacionadas
         c.nombre  AS categoria,
         sc.nombre AS subcategoria,
         m.nombre  AS marca,
-        u.nombre  AS usuario_actual,
-        a.nombre  AS area_actual
+        
+        -- LOGICA DINAMICA: Traemos datos de fichas técnicas si existen
+        ftt.serial    AS serial_tecno,
+        ftm.material  AS material_mueble
+
       FROM ${schema}.item i
-      JOIN ${schema}.subcategoria sc ON sc.id_subcategoria = i.id_subcategoria
-      JOIN ${schema}.categoria c ON c.id_categoria = sc.id_categoria
-      LEFT JOIN ${schema}.marca m ON m.id_marca = i.id_marca
-      LEFT JOIN ${schema}.usuario u ON u.id_usuario = i.id_user_actual
-      LEFT JOIN ${schema}.area_municipal a ON a.id_area = i.id_area_actual
-      ORDER BY i.id_item DESC
-      LIMIT 200;
+      -- Joins obligatorios (un item siempre tiene subcategoría y categoría)
+      JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
+      JOIN ${schema}.categoria c     ON sc.id_categoria = c.id_categoria
+      
+      -- Joins opcionales (puede no tener marca o ficha técnica)
+      LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
+      LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
+      LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
+      
+      ORDER BY i.id_item DESC;
     `;
-    const r = await pool.query(sql);
-    res.json(r.rows);
+    
+    const result = await pool.query(sql);
+    res.json(result.rows);
+    
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener items:', err);
     res.status(500).json({ message: 'Error obteniendo items' });
   }
 });
