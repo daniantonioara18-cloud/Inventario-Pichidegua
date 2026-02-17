@@ -6,13 +6,59 @@
       <small class="text-muted">Visualiza y administra los bienes municipales</small>
     </div>
 
-    <button class="btn btn-success d-flex align-items-center gap-2 shadow-sm px-3" 
-            style="background-color: var(--muni-primary); border: none;"
-            (click)="openCreateModal()">
+    <button class="btn btn-dark d-flex align-items-center gap-2 shadow-sm px-3" 
+            style="border: none;"
+            (click)="openTipoModal()">
       <i class="bi bi-plus-lg"></i>
       <span class="d-none d-sm-inline">Nuevo Item</span>
     </button>
   </div>
+  
+<!-- ============================= -->
+<!-- MODAL PREVIO: Elegir tipo -->
+<!-- ============================= -->
+<div class="modal fade"
+     [class.show]="showTipoModal"
+     [style.display]="showTipoModal ? 'block' : 'none'"
+     tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      
+      <div class="modal-header border-bottom-0">
+        <h6 class="modal-title fw-bold">
+          ¿Qué tipo de item deseas agregar?
+        </h6>
+        <button type="button"
+                class="btn-close"
+                (click)="closeTipoModal()">
+        </button>
+      </div>
+
+      <div class="modal-body text-center">
+        
+        <button class="btn btn-outline-dark w-100 mb-2"
+                (click)="seleccionarTipo('TECNO')">
+          <i class="bi bi-laptop me-2"></i>
+          Electrónico / Tecnología
+        </button>
+
+        <button class="btn btn-outline-dark w-100"
+                (click)="seleccionarTipo('MUEBLE')">
+          <i class="bi bi-building me-2"></i>
+          Inmueble / Mobiliario
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showTipoModal"></div>
+
+
+  
+
 
   <div *ngIf="successMsg" class="alert alert-success shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> {{ successMsg }}
@@ -23,6 +69,34 @@
 
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
+      <div class="p-3 border-bottom bg-light">
+      <div class="row g-2 align-items-center">
+        
+        <div class="col-md-6">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por código, nombre, modelo o marca..."
+            [(ngModel)]="searchText"
+            name="searchText"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <select
+            class="form-select"
+            [(ngModel)]="filtros.activo"
+            name="filtroActivo"
+          >
+            <option [ngValue]="null">Todos</option>
+            <option [ngValue]="true">Operativos</option>
+            <option [ngValue]="false">Baja</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
       
       <div *ngIf="loadingItems" class="text-center py-5 text-muted">
         <div class="spinner-border text-success mb-2" role="status"></div>
@@ -36,13 +110,13 @@
               <th class="ps-4 py-3 text-secondary text-uppercase small border-0">Código</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Bien</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Categoría</th>
-              <th class="py-3 text-secondary text-uppercase small border-0">Detalles</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Modo de adquisición</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Estado</th>
               <th class="text-end pe-4 py-3 text-secondary text-uppercase small border-0">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of items">
+            <tr *ngFor="let item of itemsFiltrados;">
               <td class="ps-4 fw-bold text-primary">{{ item.codigo_interno }}</td>
               <td>
                 <div class="fw-bold text-dark">{{ item.nombre }}</div>
@@ -53,9 +127,7 @@
                 <div class="small text-muted mt-1 ms-1">{{ item.subcategoria }}</div>
               </td>
               <td>
-                <div *ngIf="item.serial_tecno"><span class="badge bg-dark font-monospace fw-normal">SN: {{ item.serial_tecno }}</span></div>
-                <div *ngIf="item.material_mueble" class="text-muted small fst-italic"><i class="bi bi-layers me-1"></i>{{ item.material_mueble }}</div>
-                <span *ngIf="!item.serial_tecno && !item.material_mueble" class="text-muted small">-</span>
+                <span class="badge bg-light text-dark border">{{ item.adquisicion }}</span>
               </td>
               <td>
                 <span class="badge border" [ngClass]="item.activo ? 'bg-success-subtle text-success border-success-subtle' : 'bg-danger-subtle text-danger border-danger-subtle'">
@@ -76,7 +148,7 @@
       </div>
     </div>
   </div>
-
+  
   <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
       <div class="modal-content border-0 shadow-lg">
@@ -100,7 +172,7 @@
                 <input class="form-control" [(ngModel)]="form.codigo_interno" name="codigo_interno" placeholder="Ej: TIC-001" required />
               </div>
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Nombre del Bien <span class="text-danger">*</span></label>
+                <label class="form-label small fw-bold text-muted">Nombre <span class="text-danger">*</span></label>
                 <input class="form-control" [(ngModel)]="form.nombre" name="nombre" placeholder="Ej: Notebook HP..." required />
               </div>
 
@@ -120,7 +192,7 @@
                 <label class="form-label small fw-bold text-muted">Subcategoría <span class="text-danger">*</span></label>
                 <select class="form-select" [(ngModel)]="form.id_subcategoria" name="id_subcategoria" required>
                   <option [ngValue]="null">-- Seleccionar Tipo --</option>
-                  <option *ngFor="let sc of catalogos.subcategorias" [ngValue]="sc.id_subcategoria">
+                  <option *ngFor="let sc of subcategoriasFiltradas" [ngValue]="sc.id_subcategoria">
                     {{ sc.categoria }} - {{ sc.nombre }}
                   </option>
                 </select>
@@ -138,6 +210,14 @@
                   <option value="Bueno">Bueno</option>
                   <option value="Regular">Regular</option>
                   <option value="Malo">Malo</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold text-muted">Modo adquisición</label>
+                <select class="form-select" [(ngModel)]="form.id_adquisicion" name="id_adquisicion">
+                  <option *ngFor="let a of catalogos.adquisiciones" [ngValue]="a.id_adquisicion">
+                    {{ a.nombre }}
+                  </option>
                 </select>
               </div>
               <div class="col-md-4">

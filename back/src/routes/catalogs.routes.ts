@@ -6,7 +6,7 @@ const router = Router();
 const schema = process.env.DB_SCHEMA || 'inventario';
 
 // Marcas
-router.get('/marcas', async (_req, res) => {
+router.get('/catalogs/marcas', async (_req, res) => {
   try {
     // Esta consulta es la que conecta con las marcas que tu amigo insertó
     const result = await pool.query(`SELECT * FROM ${schema}.marca ORDER BY nombre ASC`);
@@ -24,7 +24,7 @@ router.get('/catalogs/categorias', async (_req, res) => {
 });
 
 // Subcategorías (con su categoría)
-router.get('/subcategorias', async (_req, res) => {
+router.get('/catalogs/subcategorias', async (_req, res) => {
   try {
     const sql = `
       SELECT s.id_subcategoria, s.nombre, c.nombre as categoria 

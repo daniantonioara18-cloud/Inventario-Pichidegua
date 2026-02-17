@@ -1,17 +1,25 @@
 .sidebar {
-  background: #ffffff;
+  background: #139e7a!important;
   border-right: 1px solid #e9ecef;
   min-height: calc(100vh - 60px - 48px); // navbar(60) + footer(48)
+  ;
 }
 
 .list-group-item {
   border: 0;
   border-radius: 10px;
   margin-bottom: 6px;
+  background:#139e7a!important; ;
 }
 
-.list-group-item.active {
-  background: rgba(12, 148, 113, 0.12);
-  color: #0c9471;
+.list-group-item.active-menu {
+  background-color: #21dfb0 !important; /* azul bootstrap */
+  color: #fff !important;
   font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+
+.list-group-item.active-menu i {
+  color: #fff !important;
 }

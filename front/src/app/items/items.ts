@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -14,7 +14,13 @@ import { CatalogsService, Catalogos } from '../services/catalogs';
   templateUrl: './items.html',
   styleUrls: ['./items.scss'],
 })
-export class ItemsComponent {
+export class ItemsComponent implements OnInit {
+
+  constructor(private api: ApiService, private catalogs: CatalogsService, private cdr:ChangeDetectorRef) {
+    console.log('ItemsComponent CONSTRUCTOR');
+    
+  }
+  
   // data
   items: any[] = [];
 
@@ -24,6 +30,9 @@ export class ItemsComponent {
   errorItems = '';
   errorCatalogs = '';
   successMsg = '';
+  //modal Previo
+  showTipoModal = false;
+  tiposSelecionado:'TECNO' | 'MUEBLE' | null = null;
 
   // modal
   showCreateModal = false;
@@ -52,9 +61,55 @@ export class ItemsComponent {
     id_area_actual: null as number | null,
   };
 
-  constructor(private api: ApiService, private catalogs: CatalogsService) {}
+    // -------------------------
+  // BUSCADOR / FILTROS (frontend-only)
+  // -------------------------
+  searchText = '';
+
+  filtros = {
+    activo: null as boolean | null, // null = todos
+    // si tu endpoint /items NO trae ids, estos filtros por id no funcionarán
+    marca: null as number | null,
+    subcategoria: null as number | null,
+    adquisicion: null as number | null,
+  };
+  
+
+  get itemsFiltrados() {
+    const q = this.searchText.trim().toLowerCase();
+
+    return this.items.filter((it) => {
+      // buscador por varias columnas (texto)
+      const matchTexto =
+        !q ||
+        (it.codigo_interno ?? '').toLowerCase().includes(q) ||
+        (it.nombre ?? '').toLowerCase().includes(q) ||
+        (it.modelo ?? '').toLowerCase().includes(q) ||
+        (it.marca ?? '').toLowerCase().includes(q) ||
+        (it.categoria ?? '').toLowerCase().includes(q) ||
+        (it.subcategoria ?? '').toLowerCase().includes(q);
+
+      // filtros (requieren que /items entregue id_marca, id_subcategoria, id_adquisicion)
+      const matchMarca =
+        this.filtros.marca === null || it.id_marca === this.filtros.marca;
+
+      const matchSubcat =
+        this.filtros.subcategoria === null ||
+        it.id_subcategoria === this.filtros.subcategoria;
+
+      const matchAdq =
+        this.filtros.adquisicion === null ||
+        it.id_adquisicion === this.filtros.adquisicion;
+
+      const matchActivo =
+        this.filtros.activo === null || !!it.activo === this.filtros.activo;
+
+      return matchTexto && matchMarca && matchSubcat && matchAdq && matchActivo;
+    });
+  }
 
   ngOnInit() {
+    console.log('ItemsComponent ngOnInit');
     this.loadItems();
     this.loadCatalogsOnce();
   }
@@ -66,15 +121,21 @@ export class ItemsComponent {
     this.loadingItems = true;
     this.errorItems = '';
 
-    this.api.getItems()
-      .pipe(finalize(() => (this.loadingItems = false)))
-      .subscribe({
-        next: (data) => (this.items = data),
-        error: () => (this.errorItems = 'No se pudo cargar la lista de items'),
-      });
+    this.api.getItems().subscribe({
+      next: (data) => {
+      this.items = data;
+      this.loadingItems = false;
+      this.cdr.detectChanges(); // fuerza render
+    },
+    error: ()=> {
+      this.errorItems = 'Error cargando items (revisa endpoint /items en el back)';
+      this.loadingItems = false;
+      this.cdr.detectChanges();
+    }});
   }
 
-  // -------------------------
+  
+
   // CATÁLOGOS (1 sola vez, cacheado)
   // -------------------------
   loadCatalogsOnce() {
@@ -88,6 +149,38 @@ export class ItemsComponent {
         error: () => (this.errorCatalogs = 'Error cargando catálogos (revisa endpoints en el back)'),
       });
   }
+
+  openTipoModal() {
+    this.tiposSelecionado = null;
+    this.showTipoModal = true;
+  }
+
+  closeTipoModal() {
+    this.showTipoModal = false;
+  }
+
+  seleccionarTipo(tipo: 'TECNO' | 'MUEBLE') {
+    this.tiposSelecionado = tipo;
+    this.showTipoModal=false
+
+    //opcional: dejar la subtcategoría pre-seleccionada según el tipo vacia para obligar a elegir
+    this.form.id_subcategoria = null;
+
+    //abrur modal grande
+    this.openCreateModal();
+  }
+
+  get subcategoriasFiltradas() {
+  // Si no eligieron tipo, devuelvo todas
+  if (!this.tiposSelecionado) return this.catalogos.subcategorias;
+
+  // OJO: esto depende de que tu backend mande sc.categoria como texto (Tecnología/Mobiliario)
+  const categoriaEsperada = this.tiposSelecionado === 'TECNO' ? 'Tecnología' : 'Mobiliario';
+
+  return this.catalogos.subcategorias.filter(sc => sc.categoria === categoriaEsperada);
+}
+
+
 
   // -------------------------
   // MODAL
@@ -142,3 +235,6 @@ export class ItemsComponent {
       });
   }
 }
+
+
+

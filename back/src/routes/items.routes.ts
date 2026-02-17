@@ -9,36 +9,35 @@ router.get('/items', async (_req, res) => {
     const schema = 'inventario'; 
 
     const sql = `
-      SELECT 
-        i.id_item,
-        i.codigo_interno,
-        i.nombre,
-        i.modelo,
-        i.descripcion,
-        i.condicion_fisica,
-        i.activo,
-        
-        -- Traemos nombres legibles de las tablas relacionadas
-        c.nombre  AS categoria,
-        sc.nombre AS subcategoria,
-        m.nombre  AS marca,
-        
-        -- LOGICA DINAMICA: Traemos datos de fichas técnicas si existen
-        ftt.serial    AS serial_tecno,
-        ftm.material  AS material_mueble
+    SELECT 
+      i.id_item,
+      i.codigo_interno,
+      i.nombre,
+      i.modelo,
+      i.descripcion,
+      i.condicion_fisica,
+      i.activo,
+
+      c.nombre  AS categoria,
+      sc.nombre AS subcategoria,
+      m.nombre  AS marca,
+      adq.nombre AS adquisicion, -- ✅ AQUI
+
+      ftt.serial    AS serial_tecno,
+      ftm.material  AS material_mueble
 
       FROM ${schema}.item i
-      -- Joins obligatorios (un item siempre tiene subcategoría y categoría)
       JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
       JOIN ${schema}.categoria c     ON sc.id_categoria = c.id_categoria
-      
-      -- Joins opcionales (puede no tener marca o ficha técnica)
+
       LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
+      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion -- ✅ AQUI
       LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
       LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
-      
+
       ORDER BY i.id_item DESC;
     `;
+
     
     const result = await pool.query(sql);
     res.json(result.rows);
