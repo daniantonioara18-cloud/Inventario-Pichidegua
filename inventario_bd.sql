@@ -180,3 +180,8 @@ VALUES (1, 'CNU12345XYZ', 'Intel i5', '16GB');
 -- Ficha Silla
 INSERT INTO ficha_tecnica_muebles (id_item, material, color)
 VALUES (2, 'Malla y Plástico', 'Negro');
+
+
+INSERT INTO marca (nombre) VALUES
+('HP'), ('Dell'), ('Lenovo'), ('Samsung'), ('LG'), ('Genérica')
+ON CONFLICT (nombre) DO NOTHING;
