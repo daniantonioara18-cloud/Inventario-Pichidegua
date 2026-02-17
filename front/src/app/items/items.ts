@@ -23,7 +23,7 @@ export class ItemsComponent implements OnInit {
   
   // data
   items: any[] = [];
-
+// si tu endpoint /items no entrega marca/categoría/subcategoría como texto, tendrás que mapearlos tú usando los catálogos (id -> nombre)
   // estados UI
   loadingItems = false;
   loadingCatalogs = false;
