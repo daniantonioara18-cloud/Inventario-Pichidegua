@@ -185,3 +185,18 @@ VALUES (2, 'Malla y Plástico', 'Negro');
 INSERT INTO marca (nombre) VALUES
 ('HP'), ('Dell'), ('Lenovo'), ('Samsung'), ('LG'), ('Genérica')
 ON CONFLICT (nombre) DO NOTHING;
+
+
+-- se agrego el tipo en marca 
+ALTER TABLE inventario.marca
+ADD COLUMN tipo VARCHAR(10) NOT NULL DEFAULT 'TECNO';
+
+ALTER TABLE inventario.marca
+ADD CONSTRAINT marca_tipo_chk CHECK (tipo IN ('TECNO','MUEBLE'));
+
+-- Cambiar el UNIQUE: ya NO puede ser global solo por nombre
+ALTER TABLE inventario.marca
+DROP CONSTRAINT marca_nombre_key;  -- (ojo: el nombre exacto puede variar)
+
+CREATE UNIQUE INDEX marca_nombre_tipo_uq
+ON inventario.marca (LOWER(nombre), tipo);

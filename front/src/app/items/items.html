@@ -180,13 +180,57 @@
                 <label class="form-label small fw-bold text-muted">Modelo</label>
                 <input class="form-control" [(ngModel)]="form.modelo" name="modelo" />
               </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Marca</label>
-                <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
-                  <option [ngValue]="null">-- Seleccionar --</option>
-                  <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">{{ m.nombre }}</option>
-                </select>
-              </div>
+             <div class="col-md-6">
+                  <label class="form-label small fw-bold text-muted">Marca</label>
+
+                  <div class="d-flex gap-2">
+                    <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
+                      <option [ngValue]="null">-- Seleccionar --</option>
+                      <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">
+                        {{ m.nombre }}
+                      </option>
+                    </select>
+
+                    <!-- Botón solo cuando el tipo seleccionado es MUEBLE -->
+                    <button
+                      *ngIf="tiposSeleccionado === 'MUEBLE'"
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      (click)="openAddMarca()">
+                      + Agregar
+                    </button>
+                  </div>
+
+                  <!-- Mini input inline (sin cambiar el estilo del modal) -->
+                  <div *ngIf="showAddMarca && tiposSeleccionado === 'MUEBLE'" class="mt-2">
+                    <div class="input-group">
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Nombre de marca (mueble)"
+                        [(ngModel)]="newMarcaNombre"
+                        name="newMarcaNombre"
+                      />
+
+                      <button
+                        type="button"
+                        class="btn btn-success"
+                        (click)="guardarMarca()"
+                        [disabled]="savingMarca || !newMarcaNombre.trim()">
+                        <span *ngIf="savingMarca" class="spinner-border spinner-border-sm me-2"></span>
+                        Guardar
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn btn-light"
+                        (click)="cancelAddMarca()">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
 
               <div class="col-md-12">
                 <label class="form-label small fw-bold text-muted">Subcategoría <span class="text-danger">*</span></label>

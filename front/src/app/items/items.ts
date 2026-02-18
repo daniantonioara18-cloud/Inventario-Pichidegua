@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
 import { ApiService } from '../services/api';
-import { CatalogsService, Catalogos } from '../services/catalogs';
+import { CatalogsService,CatalogosBase, Subcategoria } from '../services/catalogs';
 
 @Component({
   selector: 'app-items',
@@ -55,7 +55,7 @@ export class ItemsComponent implements OnInit {
   creating = false;
 
   // catálogos
-  catalogos: Catalogos = {
+  catalogos: CatalogosBase = {
     marcas: [],
     areas: [],
     adquisiciones: [],
@@ -158,12 +158,14 @@ export class ItemsComponent implements OnInit {
     this.loadingCatalogs = true;
     this.errorCatalogs = '';
 
-    this.catalogs.getAll()
-      .pipe(finalize(() => (this.loadingCatalogs = false)))
-      .subscribe({
-        next: (c) => (this.catalogos = c),
-        error: () => (this.errorCatalogs = 'Error cargando catálogos (revisa endpoints en el back)'),
-      });
+   this.catalogs.getAllBase().subscribe({
+    next: (c) => {
+      this.catalogos.areas = c.areas;
+      this.catalogos.adquisiciones = c.adquisiciones;
+      this.catalogos.subcategorias = c.subcategorias;
+    },
+    error: () => (this.errorCatalogs = 'Error cargando catálogos base'),
+  });
   }
 
   openTipoModal() {
@@ -175,27 +177,85 @@ export class ItemsComponent implements OnInit {
     this.showTipoModal = false;
   }
 
-  seleccionarTipo(tipo: 'TECNO' | 'MUEBLE') {
-    this.tiposSeleccionado = tipo;
-    this.showTipoModal=false
+  // seleccionarTipo(tipo: 'TECNO' | 'MUEBLE') {
+  //   this.tiposSeleccionado = tipo;
+  //   this.showTipoModal = false;
 
-    //opcional: dejar la subtcategoría pre-seleccionada según el tipo vacia para obligar a elegir
-    this.form.id_subcategoria = null;
-    this.fichaTecno = { serial:'', procesador:'', memoria_ram:'', disco_duro:'', direccion_ip:'', sistema_operativo:'', host_name:'' };
-    this.fichaMueble = { material:'', color:'', dimensiones:'' };
-    //abrur modal 
-    this.closeCreateModal()
-    this.openCreateModal();
+  //   // Limpia selección de marca para evitar arrastrar una marca de otro tipo
+  //   this.form.id_marca = null;
+
+  //   // ✅ cargar marcas del tipo seleccionado
+  //   this.loadingCatalogs = true;
+  //   this.catalogs.getMarcasByTipo(tipo).subscribe({
+  //     next: (marcas) => {
+  //       this.catalogos.marcas = marcas; // <-- ahora el select queda vacío en MUEBLE si no hay nada
+  //       this.loadingCatalogs = false;
+  //       this.openCreateModal();
+  //     },
+  //     error: () => {
+  //       this.loadingCatalogs = false;
+  //       this.errorCatalogs = 'Error cargando marcas por tipo';
+  //       this.openCreateModal();
+  //     },
+  //   });
+  // }
+  seleccionarTipo(tipo: 'TECNO' | 'MUEBLE') {
+  this.tiposSeleccionado = tipo;
+
+  // 1) cerrar modal previo
+  this.showTipoModal = false;
+
+  // 2) reset cosas del form relacionadas
+  this.form.id_marca = null;
+  this.form.id_subcategoria = null;
+
+  // 3) cargar marcas por tipo y recién ahí abrir modal grande
+  this.loadingCatalogs = true;
+  this.errorCatalogs = '';
+
+  this.catalogs.getMarcasByTipo(tipo).subscribe({
+    next: (marcas) => {
+      this.catalogos.marcas = marcas;
+      this.loadingCatalogs = false;
+
+      // 4) abrir modal grande
+      this.showCreateModal = true;
+
+      // opcional: fuerza render si todavía tienes dramas
+      this.cdr.detectChanges();
+    },
+    error: () => {
+      this.loadingCatalogs = false;
+      this.errorCatalogs = 'Error cargando marcas por tipo';
+
+      // igual abre el modal grande para que el usuario vea el error
+      this.showCreateModal = true;
+      this.cdr.detectChanges();
+    },
+  });
+}
+
+
+
+
+
+
+
+ get subcategoriasFiltradas() {
+
+  if (!this.tiposSeleccionado) {
+    return this.catalogos.subcategorias;
   }
 
-  get subcategoriasFiltradas() {
-  // Si no eligieron tipo, devuelvo i
-  if (!this.tiposSeleccionado) return this.catalogos.subcategorias;
+  const categoriaEsperada =
+    this.tiposSeleccionado === 'TECNO'
+      ? 'Tecnología'
+      : 'Mobiliario';
 
-  // OJO: esto depende de que tu backend mande sc.categoria como texto (Tecnología/Mobiliario)
-  const categoriaEsperada = this.tiposSeleccionado === 'TECNO' ? 'Tecnología' : 'Mobiliario';
-
-  return this.catalogos.subcategorias.filter(sc => sc.categoria === categoriaEsperada);
+  return this.catalogos.subcategorias
+    .filter((sc: Subcategoria) =>
+      sc.categoria === categoriaEsperada
+    );
 }
 
 
@@ -259,6 +319,55 @@ export class ItemsComponent implements OnInit {
         },
       });
   }
+
+showAddMarca = false;
+newMarcaNombre = '';
+savingMarca = false;
+
+openAddMarca() {
+  this.showAddMarca = true;
+  this.newMarcaNombre = '';
+}
+
+cancelAddMarca() {
+  this.showAddMarca = false;
+  this.newMarcaNombre = '';
+}
+
+guardarMarca() {
+  if (!this.tiposSeleccionado) return; // seguridad
+  const nombre = this.newMarcaNombre.trim();
+  if (!nombre) return;
+
+  this.savingMarca = true;
+
+  this.catalogs.createMarca(nombre, this.tiposSeleccionado)
+    .pipe(finalize(() => (this.savingMarca = false)))
+    .subscribe({
+      next: (marcaCreada) => {
+        // romper cache y recargar marcas del tipo
+        this.catalogs.invalidateMarcas(this.tiposSeleccionado!);
+
+        this.catalogs.getMarcasByTipo(this.tiposSeleccionado!)
+          .subscribe({
+            next: (marcas) => {
+              this.catalogos.marcas = marcas;
+              // seleccionar automáticamente la nueva marca
+              this.form.id_marca = marcaCreada.id_marca;
+              this.cancelAddMarca();
+            },
+            error: () => {
+              this.errorCatalogs = 'Marca creada, pero error recargando marcas';
+              this.cancelAddMarca();
+            }
+          });
+      },
+      error: (err) => {
+        this.errorCatalogs = err?.error?.error || 'Error creando marca';
+      }
+    });
+}
+
 }
 
 

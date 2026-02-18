@@ -27,8 +27,9 @@ export class ApiService {
   // CATÁLOGOS
   // ======================
 
-  getMarcas(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/catalogs/marcas`);
+  getMarcas(tipo?: 'TECNO' | 'MUEBLE'): Observable<any[]> {
+    const q = tipo ? `?tipo=${tipo}` : '';
+    return this.http.get<any[]>(`${this.baseUrl}/catalogs/marcas${q}`);
   }
 
   getSubcategorias(): Observable<any[]> {
@@ -42,4 +43,8 @@ export class ApiService {
   getAdquisiciones(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/catalogs/adquisiciones`);
   }
+
+  createMarca(nombre: string, tipo: 'TECNO' | 'MUEBLE'): Observable<any> {
+  return this.http.post(`${this.baseUrl}/catalogs/marcas`, { nombre, tipo });
+}
 }
