@@ -203,6 +203,70 @@
                 <textarea class="form-control" rows="2" [(ngModel)]="form.descripcion" name="descripcion"></textarea>
               </div>
 
+              <!-- ============================= -->
+              <!-- FICHA TÉCNICA (según tipo) -->
+              <!-- ============================= -->
+
+              <div class="col-12">
+                <hr class="my-2" />
+                <div class="fw-bold text-secondary">Ficha técnica</div>
+                <small class="text-muted">
+                  {{ tiposSeleccionado === 'TECNO' ? 'Tecnología' : (tiposSeleccionado === 'MUEBLE' ? 'Mobiliario' : '') }}
+                </small>
+              </div>
+
+                    <!-- TECNO -->
+                    <div class="row g-3" *ngIf="tiposSeleccionado === 'TECNO'">
+                      <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted">Serial</label>
+                        <input class="form-control" [(ngModel)]="fichaTecno.serial" name="ft_serial" />
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted">Procesador</label>
+                        <input class="form-control" [(ngModel)]="fichaTecno.procesador" name="ft_procesador" />
+                      </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold text-muted">Memoria RAM</label>
+                      <input class="form-control" [(ngModel)]="fichaTecno.memoria_ram" name="ft_ram" />
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold text-muted">Disco duro</label>
+                      <input class="form-control" [(ngModel)]="fichaTecno.disco_duro" name="ft_disco" />
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold text-muted">Dirección IP</label>
+                      <input class="form-control" [(ngModel)]="fichaTecno.direccion_ip" name="ft_ip" />
+                    </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-muted">Sistema Operativo</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.sistema_operativo" name="ft_so" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-muted">Host name</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.host_name" name="ft_host" />
+                </div>
+              </div>
+
+                <!-- MUEBLE -->
+                <div class="row g-3" *ngIf="tiposSeleccionado === 'MUEBLE'">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Material</label>
+                    <input class="form-control" [(ngModel)]="fichaMueble.material" name="fm_material" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Color</label>
+                    <input class="form-control" [(ngModel)]="fichaMueble.color" name="fm_color" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Dimensiones</label>
+                    <input class="form-control" [(ngModel)]="fichaMueble.dimensiones" name="fm_dimensiones" />
+                  </div>
+                </div>
+
+
+
               <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted">Condición</label>
                 <select class="form-select" [(ngModel)]="form.condicion_fisica" name="condicion_fisica">

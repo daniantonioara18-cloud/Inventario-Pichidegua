@@ -3,57 +3,58 @@ import { pool } from '../config/db';
 
 const router = Router();
 
-
 router.get('/items', async (_req, res) => {
   try {
-    const schema = 'inventario'; 
+    const schema = process.env.DB_SCHEMA || 'inventario';
 
     const sql = `
-    SELECT 
-      i.id_item,
-      i.codigo_interno,
-      i.nombre,
-      i.modelo,
-      i.descripcion,
-      i.condicion_fisica,
-      i.activo,
+      SELECT 
+        i.id_item,
+        i.codigo_interno,
+        i.nombre,
+        i.modelo,
+        i.descripcion,
+        i.condicion_fisica,
+        i.activo,
 
-      c.nombre  AS categoria,
-      sc.nombre AS subcategoria,
-      m.nombre  AS marca,
-      adq.nombre AS adquisicion, -- ✅ AQUI
+        c.nombre  AS categoria,
+        sc.nombre AS subcategoria,
+        m.nombre  AS marca,
+        adq.nombre AS adquisicion,
 
-      ftt.serial    AS serial_tecno,
-      ftm.material  AS material_mueble
+        ftt.serial    AS serial_tecno,
+        ftm.material  AS material_mueble
 
       FROM ${schema}.item i
       JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
       JOIN ${schema}.categoria c     ON sc.id_categoria = c.id_categoria
 
       LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
-      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion -- ✅ AQUI
+      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion
       LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
       LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
 
       ORDER BY i.id_item DESC;
     `;
 
-    
     const result = await pool.query(sql);
     res.json(result.rows);
-    
   } catch (err) {
     console.error('Error al obtener items:', err);
     res.status(500).json({ message: 'Error obteniendo items' });
   }
 });
 
-
 router.post('/items', async (req, res) => {
-  try {
-    const schema = process.env.DB_SCHEMA || 'inventario';
+  const schema = process.env.DB_SCHEMA || 'inventario';
+  const client = await pool.connect();
 
+  try {
+    // -------------------------
+    // 1) Leer body
+    // -------------------------
     const {
+      // item base
       codigo_interno,
       nombre,
       modelo = null,
@@ -66,21 +67,41 @@ router.post('/items', async (req, res) => {
       id_adquisicion = null,
       id_user_actual = null,
       id_area_actual = null,
+
+      // tipo (modal previo)
+      tipo, // 'TECNO' | 'MUEBLE'
     } = req.body;
 
+    // ✅ IMPORTANTE: aceptar ambos nombres desde el front
+    // (tu front manda ficha_tecnica / ficha_mueble)
+    const fichaTecno = req.body.fichaTecno ?? req.body.ficha_tecnica ?? null;
+    const fichaMueble = req.body.fichaMueble ?? req.body.ficha_mueble ?? null;
+
+    // -------------------------
+    // 2) Validaciones
+    // -------------------------
     if (!codigo_interno || !nombre || !id_subcategoria) {
-      return res.status(400).json({ message: 'Faltan campos obligatorios' });
+      return res.status(400).json({
+        message: 'Faltan campos obligatorios: codigo_interno, nombre, id_subcategoria',
+      });
     }
 
-    // Custodia exclusiva
     if (id_user_actual && id_area_actual) {
       return res.status(400).json({
         message: 'No puedes asignar usuario y área al mismo tiempo',
       });
     }
 
-    // 1️⃣ INSERT
-    const insertSql = `
+    if (tipo !== 'TECNO' && tipo !== 'MUEBLE') {
+      return res.status(400).json({ message: 'Tipo inválido. Usa TECNO o MUEBLE' });
+    }
+
+    await client.query('BEGIN');
+
+    // -------------------------
+    // 3) Insertar ITEM y obtener id_item real
+    // -------------------------
+    const insertItemSql = `
       INSERT INTO ${schema}.item (
         codigo_interno, nombre, modelo, descripcion, vida_util_meses,
         condicion_fisica, activo,
@@ -91,7 +112,7 @@ router.post('/items', async (req, res) => {
       RETURNING id_item;
     `;
 
-    const insertValues = [
+    const insertItemValues = [
       codigo_interno,
       nombre,
       modelo,
@@ -106,50 +127,106 @@ router.post('/items', async (req, res) => {
       id_area_actual,
     ];
 
-    const insertResult = await pool.query(insertSql, insertValues);
+    const insertResult = await client.query(insertItemSql, insertItemValues);
     const id_item = insertResult.rows[0].id_item;
 
-    // 2️⃣ SELECT con JOIN (MISMO formato que GET)
+    // -------------------------
+    // 4) Insertar FICHA según tipo
+    // -------------------------
+    if (tipo === 'TECNO') {
+      // Aquí mapeamos y toleramos hostname vs host_name
+      const serial = fichaTecno?.serial ?? null;
+      const procesador = fichaTecno?.procesador ?? null;
+      const memoria_ram = fichaTecno?.memoria_ram ?? null;
+      const disco_duro = fichaTecno?.disco_duro ?? null;
+      const direccion_ip = fichaTecno?.direccion_ip ?? null;
+      const sistema_operativo = fichaTecno?.sistema_operativo ?? null;
+      const host_name = fichaTecno?.host_name ?? fichaTecno?.hostname ?? null;
+
+      const insertFichaTecnoSql = `
+        INSERT INTO ${schema}.ficha_tecnica_tecno (
+          id_item, serial, procesador, memoria_ram, disco_duro, direccion_ip, sistema_operativo, host_name
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8);
+      `;
+
+      await client.query(insertFichaTecnoSql, [
+        id_item,               // ✅ SIEMPRE el id recién creado
+        serial,
+        procesador,
+        memoria_ram,
+        disco_duro,
+        direccion_ip,
+        sistema_operativo,
+        host_name,
+      ]);
+    }
+
+    if (tipo === 'MUEBLE') {
+      const material = fichaMueble?.material ?? null;
+      const color = fichaMueble?.color ?? null;
+      const dimensiones = fichaMueble?.dimensiones ?? null;
+
+      const insertFichaMuebleSql = `
+        INSERT INTO ${schema}.ficha_tecnica_muebles (
+          id_item, material, color, dimensiones
+        )
+        VALUES ($1,$2,$3,$4);
+      `;
+
+      await client.query(insertFichaMuebleSql, [id_item, material, color, dimensiones]);
+    }
+
+    await client.query('COMMIT');
+
+    // -------------------------
+    // 5) Devolver item en formato “GET /items”
+    // -------------------------
     const selectSql = `
-      SELECT
+      SELECT 
         i.id_item,
         i.codigo_interno,
         i.nombre,
         i.modelo,
         i.descripcion,
-        i.fecha_ingreso,
         i.condicion_fisica,
         i.activo,
+
         c.nombre  AS categoria,
         sc.nombre AS subcategoria,
         m.nombre  AS marca,
-        u.nombre  AS usuario_actual,
-        a.nombre  AS area_actual
+        adq.nombre AS adquisicion,
+
+        ftt.serial    AS serial_tecno,
+        ftm.material  AS material_mueble
+
       FROM ${schema}.item i
-      JOIN ${schema}.subcategoria sc ON sc.id_subcategoria = i.id_subcategoria
-      JOIN ${schema}.categoria c ON c.id_categoria = sc.id_categoria
-      LEFT JOIN ${schema}.marca m ON m.id_marca = i.id_marca
-      LEFT JOIN ${schema}.usuario u ON u.id_usuario = i.id_user_actual
-      LEFT JOIN ${schema}.area_municipal a ON a.id_area = i.id_area_actual
+      JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
+      JOIN ${schema}.categoria c     ON sc.id_categoria = c.id_categoria
+      LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
+      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion
+      LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
+      LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
       WHERE i.id_item = $1;
     `;
 
-    const itemResult = await pool.query(selectSql, [id_item]);
+    const itemResult = await client.query(selectSql, [id_item]);
 
     return res.status(201).json({
       message: 'Item creado',
       item: itemResult.rows[0],
     });
   } catch (err: any) {
-    console.error(err);
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Error creando item:', err);
 
-    if (err.code === '23505') {
-      return res.status(409).json({ message: 'Código interno duplicado' });
-    }
+    if (err.code === '23505') return res.status(409).json({ message: 'Código interno duplicado' });
+    if (err.code === '23503') return res.status(400).json({ message: 'FK inválida (revisa ids)' });
 
     return res.status(500).json({ message: 'Error creando item' });
+  } finally {
+    client.release();
   }
 });
-
 
 export default router;

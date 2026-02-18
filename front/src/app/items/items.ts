@@ -32,7 +32,23 @@ export class ItemsComponent implements OnInit {
   successMsg = '';
   //modal Previo
   showTipoModal = false;
-  tiposSelecionado:'TECNO' | 'MUEBLE' | null = null;
+  tiposSeleccionado:'TECNO' | 'MUEBLE' | null = null;
+
+  fichaTecno = {
+    serial: '',
+    procesador: '',
+    memoria_ram: "",
+    disco_duro:"",
+    direccion_ip: '',
+    sistema_operativo: '',
+    host_name: '',
+  };
+
+  fichaMueble = {
+    material: '',
+    color: '',
+    dimensiones: '',
+  };
 
   // modal
   showCreateModal = false;
@@ -151,7 +167,7 @@ export class ItemsComponent implements OnInit {
   }
 
   openTipoModal() {
-    this.tiposSelecionado = null;
+    this.tiposSeleccionado = null;
     this.showTipoModal = true;
   }
 
@@ -160,22 +176,24 @@ export class ItemsComponent implements OnInit {
   }
 
   seleccionarTipo(tipo: 'TECNO' | 'MUEBLE') {
-    this.tiposSelecionado = tipo;
+    this.tiposSeleccionado = tipo;
     this.showTipoModal=false
 
     //opcional: dejar la subtcategoría pre-seleccionada según el tipo vacia para obligar a elegir
     this.form.id_subcategoria = null;
-
-    //abrur modal grande
+    this.fichaTecno = { serial:'', procesador:'', memoria_ram:'', disco_duro:'', direccion_ip:'', sistema_operativo:'', host_name:'' };
+    this.fichaMueble = { material:'', color:'', dimensiones:'' };
+    //abrur modal 
+    this.closeCreateModal()
     this.openCreateModal();
   }
 
   get subcategoriasFiltradas() {
-  // Si no eligieron tipo, devuelvo todas
-  if (!this.tiposSelecionado) return this.catalogos.subcategorias;
+  // Si no eligieron tipo, devuelvo i
+  if (!this.tiposSeleccionado) return this.catalogos.subcategorias;
 
   // OJO: esto depende de que tu backend mande sc.categoria como texto (Tecnología/Mobiliario)
-  const categoriaEsperada = this.tiposSelecionado === 'TECNO' ? 'Tecnología' : 'Mobiliario';
+  const categoriaEsperada = this.tiposSeleccionado === 'TECNO' ? 'Tecnología' : 'Mobiliario';
 
   return this.catalogos.subcategorias.filter(sc => sc.categoria === categoriaEsperada);
 }
@@ -209,7 +227,14 @@ export class ItemsComponent implements OnInit {
 
     this.creating = true;
 
-    this.api.createItem(this.form)
+    const payload = {
+      ...this.form,
+      tipo : this.tiposSeleccionado, // 'TECNO' o 'MUEBLE'
+      ficha_tecnica: this.tiposSeleccionado === 'TECNO' ? this.fichaTecno : null,
+      ficha_mueble: this.tiposSeleccionado === 'MUEBLE' ? this.fichaMueble : null,
+    };
+
+    this.api.createItem(payload)
       .pipe(finalize(() => (this.creating = false)))
       .subscribe({
         next: (resp: any) => {

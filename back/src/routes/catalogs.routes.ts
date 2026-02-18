@@ -58,4 +58,5 @@ router.get('/catalogs/adquisiciones', async (_req, res) => {
   res.json(r.rows);
 });
 
+
 export default router;
