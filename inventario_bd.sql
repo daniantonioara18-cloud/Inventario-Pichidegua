@@ -200,3 +200,25 @@ DROP CONSTRAINT marca_nombre_key;  -- (ojo: el nombre exacto puede variar)
 
 CREATE UNIQUE INDEX marca_nombre_tipo_uq
 ON inventario.marca (LOWER(nombre), tipo);
+
+
+--INSERTAR USUARIO Y AREA MUNICIAOL
+
+INSERT INTO inventario.area_municipal (nombre)
+VALUES
+ ('Informática'),
+ ('Finanzas'),
+ ('DIDECO'),
+ ('BODEGA'),
+ ('Obras Municipales'),
+ ('Administración'),
+ ('Alcaldía')
+ON CONFLICT (nombre) DO NOTHING;
+
+
+INSERT INTO inventario.usuario (nombre, email, cargo, id_area)
+VALUES
+ ('Juan Pérez', 'juan.perez@muni.cl', 'Encargado Informática', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Informática')),
+ ('María Soto', 'maria.soto@muni.cl', 'Encargada Bodega', 4),
+ ('Pedro Díaz', 'pedro.diaz@muni.cl', 'Administrativo', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Administración'))
+ON CONFLICT (email) DO NOTHING;
