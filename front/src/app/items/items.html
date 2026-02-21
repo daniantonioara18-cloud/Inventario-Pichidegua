@@ -135,7 +135,7 @@
                 </span>
               </td>
               <td class="text-end pe-4">
-                <button class="btn btn-sm btn-light text-secondary border hover-shadow" title="Ver Detalle">
+                <button class="btn btn-sm btn-light text-secondary border hover-shadow" title="Ver Detalle" (click)="openDetailModal(item)">
                   <i class="bi bi-eye"></i>
                 </button>
               </td>
@@ -352,6 +352,142 @@
       </div>
     </div>
   </div>
+
+
+  <!-- ============================= -->
+<!-- MODAL DETALLE ITEM -->
+<!-- ============================= -->
+<div class="modal fade"
+     [class.show]="showDetailModal"
+     [style.display]="showDetailModal ? 'block' : 'none'"
+     tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold text-secondary">
+          Detalle del Item
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDetailModal()"></button>
+      </div>
+
+      <div class="modal-body pt-4">
+
+        <div *ngIf="loadingDetail" class="text-center py-4 text-muted">
+          <div class="spinner-border spinner-border-sm text-success mb-2"></div>
+          <div>Cargando detalle...</div>
+        </div>
+
+        <div *ngIf="errorDetail" class="alert alert-danger border-0">
+          {{ errorDetail }}
+        </div>
+
+        <div *ngIf="!loadingDetail && selectItem">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Código Interno</div>
+              <div class="fw-semibold">{{ selectItem.codigo_interno }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Nombre</div>
+              <div class="fw-semibold">{{ selectItem.nombre }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Modelo</div>
+              <div>{{ selectItem.modelo || 'S/M' }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Marca</div>
+              <div>{{ selectItem.marca || 'Sin marca' }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Categoría</div>
+              <div>{{ selectItem.categoria }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Subcategoría</div>
+              <div>{{ selectItem.subcategoria }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Modo adquisición</div>
+              <div>{{ selectItem.adquisicion || 'N/A' }}</div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="small text-muted fw-bold">Condición</div>
+              <div>{{ selectItem.condicion_fisica || 'N/A' }}</div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="small text-muted fw-bold">Vida útil</div>
+              <div>{{ selectItem.vida_util_meses ?? 'N/A' }}</div>
+            </div>
+
+            <div class="col-12">
+              <div class="small text-muted fw-bold">Descripción</div>
+              <div>{{ selectItem.descripcion || '—' }}</div>
+            </div>
+          </div>
+
+          <hr class="my-3" />
+
+          <!-- FICHA TECNO si existe -->
+          <div *ngIf="selectItem.id_ficha_tecno">
+            <div class="fw-bold text-secondary mb-2">Ficha técnica (Tecnología)</div>
+            <div class="row g-3">
+              <div class="col-md-6"><div class="small text-muted fw-bold">Serial</div>{{ selectItem.serial || '—' }}</div>
+              <div class="col-md-6"><div class="small text-muted fw-bold">Procesador</div>{{ selectItem.procesador || '—' }}</div>
+              <div class="col-md-4"><div class="small text-muted fw-bold">RAM</div>{{ selectItem.memoria_ram || '—' }}</div>
+              <div class="col-md-4"><div class="small text-muted fw-bold">Disco</div>{{ selectItem.disco_duro || '—' }}</div>
+              <div class="col-md-4"><div class="small text-muted fw-bold">IP</div>{{ selectItem.direccion_ip || '—' }}</div>
+              <div class="col-md-6"><div class="small text-muted fw-bold">SO</div>{{ selectItem.sistema_operativo || '—' }}</div>
+              <div class="col-md-6"><div class="small text-muted fw-bold">Host</div>{{ selectItem.host_name || '—' }}</div>
+            </div>
+          </div>
+
+          <!-- FICHA MUEBLE si existe -->
+          <div *ngIf="selectItem.id_ficha_mueble">
+            <div class="fw-bold text-secondary mb-2">Ficha técnica (Mobiliario)</div>
+            <div class="row g-3">
+              <div class="col-md-4"><div class="small text-muted fw-bold">Material</div>{{ selectItem.material || '—' }}</div>
+              <div class="col-md-4"><div class="small text-muted fw-bold">Color</div>{{ selectItem.color || '—' }}</div>
+              <div class="col-md-4"><div class="small text-muted fw-bold">Dimensiones</div>{{ selectItem.dimensiones || '—' }}</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-light text-secondary" (click)="closeDetailModal()">
+          Cerrar
+        </button>
+
+        <!-- Estos 3 ahora pueden abrir otros modales -->
+        <button type="button" class="btn btn-outline-dark" >
+          Editar
+        </button>
+        <button type="button" class="btn btn-outline-dark" >
+          Mover
+        </button>
+        <button type="button" class="btn btn-success text-white" style="background-color: var(--muni-primary);"
+          >
+          Asignar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showDetailModal"></div>
 
   <div class="modal-backdrop fade show" *ngIf="showCreateModal"></div>
 

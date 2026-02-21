@@ -19,6 +19,10 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/items`);
   }
 
+  getItemById(id: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/items/${id}`);
+  }
+
   createItem(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/items`, data);
   }
@@ -47,4 +51,7 @@ export class ApiService {
   createMarca(nombre: string, tipo: 'TECNO' | 'MUEBLE'): Observable<any> {
   return this.http.post(`${this.baseUrl}/catalogs/marcas`, { nombre, tipo });
 }
+
+
+
 }

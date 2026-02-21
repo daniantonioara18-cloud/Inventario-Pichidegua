@@ -90,6 +90,41 @@ export class ItemsComponent implements OnInit {
     adquisicion: null as number | null,
   };
   
+  showDetailModal = false;
+  loadingDetail = false;
+  errorDetail = '';
+  selectItem: any = null;
+  
+  openDetailModal(item: any) {
+    this.selectItem = item;
+    this.showDetailModal = true;
+    this.loadingDetail = true;
+    this.errorDetail = '';
+
+    //Pedimos el detalle real al backend
+    this.api.getItemById(item.id_item).subscribe({
+      next: (data) => {
+        this.selectItem = data;
+        this.loadingDetail = false;
+        this.cdr.detectChanges();
+      },
+
+      error:()=>{
+        this.errorDetail = 'Error cargando detalle del item';
+        this.loadingDetail = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openEditFromDetail(){
+    // cerrar modal detalle
+  }
+
+  closeDetailModal() {
+    this.showDetailModal = false;
+    this.selectItem = null;
+  }
 
   get itemsFiltrados() {
     const q = this.searchText.trim().toLowerCase();

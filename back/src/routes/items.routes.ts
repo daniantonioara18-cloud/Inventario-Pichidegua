@@ -45,6 +45,79 @@ router.get('/items', async (_req, res) => {
   }
 });
 
+
+
+router.get('/items/:id', async (req, res) => {
+  try {
+    const schema = process.env.DB_SCHEMA || 'inventario';
+    const id = req.params.id;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ message: 'ID inválido' });
+    }
+
+    const sql = `
+      SELECT 
+        i.id_item,
+        i.codigo_interno,
+        i.nombre,
+        i.modelo,
+        i.descripcion,
+        i.vida_util_meses,
+        i.condicion_fisica,
+        i.activo,
+
+        i.id_subcategoria,
+        i.id_marca,
+        i.id_adquisicion,
+        i.id_user_actual,
+        i.id_area_actual,
+
+        c.nombre  AS categoria,
+        sc.nombre AS subcategoria,
+        m.nombre  AS marca,
+        adq.nombre AS adquisicion,
+
+        ftt.id_ficha_tecno,
+        ftt.serial,
+        ftt.procesador,
+        ftt.memoria_ram,
+        ftt.disco_duro,
+        ftt.direccion_ip,
+        ftt.sistema_operativo,
+        ftt.host_name,
+
+        ftm.id_ficha_mueble,
+        ftm.material,
+        ftm.color,
+        ftm.dimensiones
+
+      FROM ${schema}.item i
+      JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
+      JOIN ${schema}.categoria c     ON sc.id_categoria = c.id_categoria
+
+      LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
+      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion
+      LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
+      LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
+
+      WHERE i.id_item = $1
+      LIMIT 1;
+    `;
+
+    const result = await pool.query(sql, [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Item no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al obtener item:', err);
+    res.status(500).json({ message: 'Error obteniendo item' });
+  }
+});
+
+
+
 router.post('/items', async (req, res) => {
   const schema = process.env.DB_SCHEMA || 'inventario';
   const client = await pool.connect();
