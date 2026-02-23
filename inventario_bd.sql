@@ -222,3 +222,26 @@ VALUES
  ('María Soto', 'maria.soto@muni.cl', 'Encargada Bodega', 4),
  ('Pedro Díaz', 'pedro.diaz@muni.cl', 'Administrativo', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Administración'))
 ON CONFLICT (email) DO NOTHING;
+
+
+
+--Crear tabla tipo_movimiento
+
+-- 0.1) Tabla tipos
+CREATE TABLE IF NOT EXISTS inventario.tipo_movimiento (
+  id_tipo_movimiento BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE
+);
+
+-- 0.2) Tipos base
+INSERT INTO inventario.tipo_movimiento (nombre)
+VALUES ('ASIGNACION'), ('TRASLADO'), ('EDICION')
+ON CONFLICT (nombre) DO NOTHING;
+
+-- 0.3) FK movimiento -> tipo_movimiento (si aún no existe)
+ALTER TABLE inventario.movimiento
+ADD CONSTRAINT fk_movimiento_tipo
+FOREIGN KEY (id_tipo_movimiento)
+REFERENCES inventario.tipo_movimiento(id_tipo_movimiento);
+
+
