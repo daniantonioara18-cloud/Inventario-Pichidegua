@@ -1,15 +1,21 @@
-<app-navbar class="layout-navbar fixed-top"></app-navbar>
+<ng-container *ngIf="auth.isLoggedIn(); else loginOnly">
+  <app-navbar class="layout-navbar fixed-top"></app-navbar>
 
-<aside class="layout-sidebar d-none d-lg-block">
-  <app-sidebar></app-sidebar>
-</aside>
+  <aside class="layout-sidebar d-none d-lg-block">
+    <app-sidebar></app-sidebar>
+  </aside>
 
-<main class="layout-content">
-  <div class="fade-in">
-    <router-outlet></router-outlet>
-  </div>
-  
-  <div class="mt-5">
-    <app-footer></app-footer>
-  </div>
-</main>
+  <main class="layout-content">
+    <div class="fade-in">
+      <router-outlet></router-outlet>
+    </div>
+    
+    <div class="mt-5">
+      <app-footer></app-footer>
+    </div>
+  </main>
+</ng-container>
+
+<ng-template #loginOnly>
+  <router-outlet></router-outlet>
+</ng-template>
