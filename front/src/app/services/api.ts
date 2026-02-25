@@ -53,5 +53,15 @@ export class ApiService {
 }
 
 
+  asignarItem(id:number,data:any){
+    return this.http.post(`${this.baseUrl}/items/${id}/asignar`, data);
+  }
+
+  moverIte(id:number,data:any){
+    return this.http.post(`${this.baseUrl}/items/${id}/mover`, data);
+  }
+  getUsuarios(): Observable<any[]> {
+  return this.http.get<any[]>(`${this.baseUrl}/catalogs/usuarios`);
+}
 
 }

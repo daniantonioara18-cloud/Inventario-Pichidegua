@@ -471,21 +471,238 @@
         </button>
 
         <!-- Estos 3 ahora pueden abrir otros modales -->
-        <button type="button" class="btn btn-outline-dark" >
+        <button type="button" class="btn btn-outline-dark" (click)="openEditar()" >
           Editar
         </button>
-        <button type="button" class="btn btn-outline-dark" >
+
+        <button type="button"
+        class="btn btn-outline-dark"
+        (click)="openMover()">
           Mover
         </button>
-        <button type="button" class="btn btn-success text-white" style="background-color: var(--muni-primary);"
-          >
+
+        <button type="button"
+        class="btn btn-success text-white"
+        (click)="openAsignar()"
+        *ngIf="!itemEstaAsignado"
+        style="background-color: var(--muni-primary);">
           Asignar
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================= -->
+<!-- MODAL ASIGNAR -->
+<!-- ============================= -->
+<div class="modal fade"
+     [class.show]="showAsignarModal"
+     [style.display]="showAsignarModal ? 'block' : 'none'"
+     tabindex="-1">
+
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Asignar Item</h5>
+        <button type="button" class="btn-close" (click)="closeAsignar()"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted">Área</label>
+          <select class="form-select"
+              [(ngModel)]="formAsignar.destino_id_area"
+              name="asig_area">
+        <option [ngValue]="null">-- Seleccionar Área --</option>
+        <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">{{ a.nombre }}</option>
+      </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted">Usuario</label>
+          <select class="form-select"
+                [(ngModel)]="formAsignar.destino_id_usuario"
+                name="asig_usuario">
+          <option [ngValue]="null">-- Seleccionar Usuario --</option>
+          <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">{{ u.nombre }}</option>
+        </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small text-muted">Observación</label>
+          <textarea class="form-control"
+                    rows="2"
+                    [(ngModel)]="formAsignar.observacion">
+          </textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-light" (click)="closeAsignar()">Cancelar</button>
+        <button class="btn btn-success"
+                (click)="confirmarAsignar()">
+          Confirmar Asignación
         </button>
       </div>
 
     </div>
   </div>
 </div>
+
+
+<!-- ========================= -->
+<!-- MODAL MOVER -->
+<!-- ========================= -->
+<div class="modal fade"
+     [class.show]="showMoverModal"
+     [style.display]="showMoverModal ? 'block' : 'none'"
+     tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Mover Item</h5>
+        <button type="button" class="btn-close" (click)="closeMover()"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-muted">Área</label>
+          <select class="form-select" [(ngModel)]="formMover.destino_id_area" name="mv_area">
+            <option [ngValue]="null">-- Seleccionar Área --</option>
+            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">{{ a.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-muted">Usuario</label>
+          <select class="form-select" [(ngModel)]="formMover.destino_id_usuario" name="mv_usuario">
+            <option [ngValue]="null">-- Seleccionar Usuario --</option>
+            <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">{{ u.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label small fw-bold text-muted">Observación</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="formMover.observacion" name="mv_obs"></textarea>
+        </div>
+
+        <small class="text-muted">
+          Regla: elige <b>solo usuario</b> o <b>solo área</b>.
+        </small>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-light" (click)="closeMover()">Cancelar</button>
+        <button class="btn btn-success" (click)="confirmarMover()">Confirmar Movimiento</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showMoverModal"></div>
+
+<!-- ============================= -->
+<!-- MODAL EDITAR -->
+<!-- ============================= -->
+<div class="modal fade"
+     [class.show]="showEditarModal"
+     [style.display]="showEditarModal ? 'block' : 'none'"
+     tabindex="-1">
+
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Editar Item</h5>
+        <button type="button" class="btn-close" (click)="closeEditar()"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-muted">Nombre</label>
+            <input class="form-control"
+                   [(ngModel)]="formEditar.nombre">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-muted">Modelo</label>
+            <input class="form-control"
+                   [(ngModel)]="formEditar.modelo">
+          </div>
+
+          <div class="col-md-12">
+            <label class="form-label small fw-bold text-muted">Descripción</label>
+            <textarea class="form-control"
+                      rows="2"
+                      [(ngModel)]="formEditar.descripcion">
+            </textarea>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-light" (click)="closeEditar()">Cancelar</button>
+        <button class="btn btn-outline-dark"
+                (click)="confirmarEditar()">
+          Guardar Cambios
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<div class="modal-backdrop fade show" *ngIf="showEditarModal"></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="modal-backdrop fade show" *ngIf="showMoverModal"></div>
+
+
+
+
+
+
+
+<div class="modal-backdrop fade show" *ngIf="showAsignarModal"></div>
+
+
+
+
+
+
+
 
 <div class="modal-backdrop fade show" *ngIf="showDetailModal"></div>
 

@@ -302,4 +302,199 @@ router.post('/items', async (req, res) => {
   }
 });
 
+
+router.patch('/items/:id/asignar', async (req, res) => {
+  const schema = process.env.DB_SCHEMA || 'inventario';
+  const id_item = Number(req.params.id);
+
+  const {
+    destino_id_usuario = null,
+    destino_id_area = null,
+    observacion = null,
+    id_registro_adm, // quien registra
+  } = req.body;
+
+  if (!Number.isFinite(id_item)) return res.status(400).json({ message: 'ID inválido' });
+  if (!id_registro_adm) return res.status(400).json({ message: 'Falta id_registro_adm' });
+
+  // solo uno
+  const tieneUsuario = destino_id_usuario !== null && destino_id_usuario !== undefined;
+  const tieneArea = destino_id_area !== null && destino_id_area !== undefined;
+  if ((tieneUsuario && tieneArea) || (!tieneUsuario && !tieneArea)) {
+    return res.status(400).json({ message: 'Debes enviar SOLO destino_id_usuario o SOLO destino_id_area' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1) verificar estado actual
+    const qItem = await client.query(
+      `SELECT id_user_actual, id_area_actual FROM ${schema}.item WHERE id_item = $1 FOR UPDATE`,
+      [id_item]
+    );
+    if (qItem.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Item no encontrado' });
+    }
+
+    const { id_user_actual, id_area_actual } = qItem.rows[0];
+
+    // si ya tiene custodia -> no permitir
+    if (id_user_actual !== null || id_area_actual !== null) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Este item ya fue asignado. Usa Mover.' });
+    }
+
+    // 2) obtener id tipo movimiento = ASIGNACION
+    const qTipo = await client.query(
+      `SELECT id_tipo_movimiento FROM ${schema}.tipo_movimiento WHERE nombre = 'ASIGNACION' LIMIT 1`
+    );
+    const id_tipo_movimiento = qTipo.rows[0]?.id_tipo_movimiento;
+    if (!id_tipo_movimiento) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ message: 'No existe tipo_movimiento ASIGNACION' });
+    }
+
+    // 3) insertar movimiento (origen null, destino según)
+    await client.query(
+      `INSERT INTO ${schema}.movimiento (
+        observacion, id_tipo_movimiento, id_item, id_registro_adm,
+        origen_id_area, origen_id_usuario,
+        destino_id_area, destino_id_usuario
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        observacion,
+        id_tipo_movimiento,
+        id_item,
+        id_registro_adm,
+        null, null,
+        tieneArea ? destino_id_area : null,
+        tieneUsuario ? destino_id_usuario : null,
+      ]
+    );
+
+    // 4) actualizar item (custodia exclusiva)
+    await client.query(
+      `UPDATE ${schema}.item
+       SET id_user_actual = $1,
+           id_area_actual = $2
+       WHERE id_item = $3`,
+      [
+        tieneUsuario ? destino_id_usuario : null,
+        tieneArea ? destino_id_area : null,
+        id_item,
+      ]
+    );
+
+    await client.query('COMMIT');
+    res.json({ message: 'Asignado correctamente' });
+  } catch (err: any) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error(err);
+    if (err.code === '23503') return res.status(400).json({ message: 'FK inválida (usuario/área no existe)' });
+    return res.status(500).json({ message: 'Error asignando' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/items/:id/mover', async (req, res) => {
+  const schema = process.env.DB_SCHEMA || 'inventario';
+  const id_item = Number(req.params.id);
+
+  const {
+    destino_id_usuario = null,
+    destino_id_area = null,
+    observacion = null,
+    id_registro_adm,
+  } = req.body;
+
+  if (!Number.isFinite(id_item)) return res.status(400).json({ message: 'ID inválido' });
+  if (!id_registro_adm) return res.status(400).json({ message: 'Falta id_registro_adm' });
+
+  const tieneUsuario = destino_id_usuario !== null && destino_id_usuario !== undefined;
+  const tieneArea = destino_id_area !== null && destino_id_area !== undefined;
+  if ((tieneUsuario && tieneArea) || (!tieneUsuario && !tieneArea)) {
+    return res.status(400).json({ message: 'Debes enviar SOLO destino_id_usuario o SOLO destino_id_area' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const qItem = await client.query(
+      `SELECT id_user_actual, id_area_actual FROM ${schema}.item WHERE id_item = $1 FOR UPDATE`,
+      [id_item]
+    );
+    if (qItem.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Item no encontrado' });
+    }
+
+    const { id_user_actual, id_area_actual } = qItem.rows[0];
+
+    // si NO tiene custodia -> no mover
+    if (id_user_actual === null && id_area_actual === null) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Este item aún no está asignado. Usa Asignar.' });
+    }
+
+    const qTipo = await client.query(
+      `SELECT id_tipo_movimiento FROM ${schema}.tipo_movimiento WHERE nombre = 'TRASLADO' LIMIT 1`
+    );
+    const id_tipo_movimiento = qTipo.rows[0]?.id_tipo_movimiento;
+    if (!id_tipo_movimiento) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ message: 'No existe tipo_movimiento TRASLADO' });
+    }
+
+    await client.query(
+      `INSERT INTO ${schema}.movimiento (
+        observacion, id_tipo_movimiento, id_item, id_registro_adm,
+        origen_id_area, origen_id_usuario,
+        destino_id_area, destino_id_usuario
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        observacion,
+        id_tipo_movimiento,
+        id_item,
+        id_registro_adm,
+        id_area_actual,
+        id_user_actual,
+        tieneArea ? destino_id_area : null,
+        tieneUsuario ? destino_id_usuario : null,
+      ]
+    );
+
+    await client.query(
+      `UPDATE ${schema}.item
+       SET id_user_actual = $1,
+           id_area_actual = $2
+       WHERE id_item = $3`,
+      [
+        tieneUsuario ? destino_id_usuario : null,
+        tieneArea ? destino_id_area : null,
+        id_item,
+      ]
+    );
+
+    await client.query('COMMIT');
+    res.json({ message: 'Movido correctamente' });
+  } catch (err: any) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error(err);
+    if (err.code === '23503') return res.status(400).json({ message: 'FK inválida (usuario/área no existe)' });
+    return res.status(500).json({ message: 'Error moviendo' });
+  } finally {
+    client.release();
+  }
+});
+
+
+
+
+
+
+
 export default router;

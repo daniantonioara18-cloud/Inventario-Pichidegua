@@ -245,3 +245,19 @@ FOREIGN KEY (id_tipo_movimiento)
 REFERENCES inventario.tipo_movimiento(id_tipo_movimiento);
 
 
+-- áreas
+INSERT INTO inventario.area_municipal (nombre)
+VALUES
+('Finanzas'),
+('Informática'),
+('SECPLAC'),
+('Obras'),
+('Alcaldía')
+ON CONFLICT (nombre) DO NOTHING;
+
+-- usuarios (con área opcional)
+INSERT INTO inventario.usuario (nombre, email, cargo, id_area)
+VALUES
+('Juan Pérez', 'juan.perez@muni.cl', 'Encargado', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Informática')),
+('María Soto', 'maria.soto@muni.cl', 'Administrativa', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Finanzas')),
+('Pedro Rojas', 'pedro.rojas@muni.cl', 'Técnico', 2);
