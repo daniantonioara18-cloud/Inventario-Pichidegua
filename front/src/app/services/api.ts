@@ -64,4 +64,26 @@ export class ApiService {
   return this.http.get<any[]>(`${this.baseUrl}/catalogs/usuarios`);
 }
 
+getMovimientos(params?: { q?: string; tipo?: string; limit?: number; offset?: number }) {
+  const q = params?.q ? `q=${encodeURIComponent(params.q)}` : '';
+  const tipo = params?.tipo ? `tipo=${encodeURIComponent(params.tipo)}` : '';
+  const limit = params?.limit != null ? `limit=${params.limit}` : '';
+  const offset = params?.offset != null ? `offset=${params.offset}` : '';
+
+  const query = [q, tipo, limit, offset].filter(Boolean).join('&');
+  return this.http.get<any[]>(`${this.baseUrl}/movimientos${query ? '?' + query : ''}`);
+}
+
+createUsuario(data: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}/usuarios`, data);
+}
+
+updateUsuario(id: number, data: any): Observable<any> {
+  return this.http.put(`${this.baseUrl}/usuarios/${id}`, data);
+}
+
+deleteUsuario(id: number): Observable<any> {
+  return this.http.delete(`${this.baseUrl}/usuarios/${id}`);
+}
+
 }

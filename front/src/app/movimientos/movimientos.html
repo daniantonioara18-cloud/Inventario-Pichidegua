@@ -1,0 +1,192 @@
+<div class="container-fluid fade-in">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold text-secondary">Movimientos</h4>
+      <small class="text-muted">Historial de asignaciones y traslados</small>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-dark shadow-sm" (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+      <button class="btn btn-dark shadow-sm" (click)="loadMovimientos()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="success" class="alert alert-success shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ success }}
+  </div>
+  <div *ngIf="error" class="alert alert-danger shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+
+      <!-- filtros -->
+      <div class="p-3 border-bottom bg-light">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Buscar por código, nombre, usuario o área..."
+              [(ngModel)]="searchText"
+              (keyup.enter)="onBuscar()"
+              name="searchText"
+            />
+          </div>
+
+          <div class="col-md-3">
+            <select class="form-select" [(ngModel)]="filtroTipo" name="filtroTipo" (change)="onBuscar()">
+              <option [ngValue]="''">Todos</option>
+              <option [ngValue]="'ASIGNACION'">Asignación</option>
+              <option [ngValue]="'TRASLADO'">Traslado</option>
+            </select>
+          </div>
+
+          <div class="col-md-2 d-grid">
+            <button class="btn btn-success text-white" style="background-color: var(--muni-primary);" (click)="onBuscar()">
+              <i class="bi bi-search me-1"></i> Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- loading -->
+      <div *ngIf="loading" class="text-center py-5 text-muted">
+        <div class="spinner-border text-success mb-2" role="status"></div>
+        <div>Cargando movimientos...</div>
+      </div>
+
+      <!-- tabla -->
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="ps-4 py-3 text-secondary text-uppercase small border-0">Fecha</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Tipo</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Item</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Origen → Destino</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Registrado por</th>
+              <th class="text-end pe-4 py-3 text-secondary text-uppercase small border-0">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let m of movimientos">
+              <td class="ps-4">
+                <div class="fw-semibold">{{ m.fecha | date:'dd/MM/yyyy' }}</div>
+                <div class="small text-muted">{{ m.fecha | date:'HH:mm' }}</div>
+              </td>
+
+              <td>
+                <span class="badge border" [ngClass]="badgeClass(m.tipo)">
+                  {{ m.tipo }}
+                </span>
+              </td>
+
+              <td>
+                <div class="fw-bold text-primary">{{ m.codigo_interno }}</div>
+                <div class="small text-muted">{{ m.item_nombre }}</div>
+              </td>
+
+              <td>
+                <div class="small text-muted">De:</div>
+                <div class="fw-semibold">{{ fmtOrigen(m) }}</div>
+                <div class="small text-muted mt-1">A:</div>
+                <div class="fw-semibold">{{ fmtDestino(m) }}</div>
+              </td>
+
+              <td>
+                <div class="fw-semibold">{{ m.registrado_por || '—' }}</div>
+                <div class="small text-muted">ID: {{ m.id_registro_adm }}</div>
+              </td>
+
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-light text-secondary border hover-shadow" (click)="openDetail(m)" title="Ver detalle">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="movimientos.length === 0">
+              <td colspan="6" class="text-center py-5 text-muted">
+                No hay movimientos registrados
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL DETALLE -->
+  <div class="modal fade"
+       [class.show]="showDetailModal"
+       [style.display]="showDetailModal ? 'block' : 'none'"
+       tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold text-secondary">Detalle del Movimiento</h5>
+          <button type="button" class="btn-close" (click)="closeDetail()"></button>
+        </div>
+
+        <div class="modal-body pt-4" *ngIf="selectedMov">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Fecha</div>
+              <div class="fw-semibold">{{ selectedMov.fecha | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Tipo</div>
+              <span class="badge border" [ngClass]="badgeClass(selectedMov.tipo)">{{ selectedMov.tipo }}</span>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Item</div>
+              <div class="fw-semibold">{{ selectedMov.codigo_interno }} — {{ selectedMov.item_nombre }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Registrado por</div>
+              <div class="fw-semibold">{{ selectedMov.registrado_por || '—' }} (ID {{ selectedMov.id_registro_adm }})</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Origen</div>
+              <div class="fw-semibold">{{ fmtOrigen(selectedMov) }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted fw-bold">Destino</div>
+              <div class="fw-semibold">{{ fmtDestino(selectedMov) }}</div>
+            </div>
+
+            <div class="col-12">
+              <div class="small text-muted fw-bold">Observación</div>
+              <div class="fw-semibold">{{ selectedMov.observacion || '—' }}</div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer border-top-0">
+          <button class="btn btn-light text-secondary" (click)="closeDetail()">Cerrar</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop fade show" *ngIf="showDetailModal"></div>
+
+</div>

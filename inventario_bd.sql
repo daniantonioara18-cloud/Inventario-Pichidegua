@@ -261,3 +261,27 @@ VALUES
 ('Juan Pérez', 'juan.perez@muni.cl', 'Encargado', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Informática')),
 ('María Soto', 'maria.soto@muni.cl', 'Administrativa', (SELECT id_area FROM inventario.area_municipal WHERE nombre='Finanzas')),
 ('Pedro Rojas', 'pedro.rojas@muni.cl', 'Técnico', 2);
+
+
+
+ALTER TABLE inventario.item
+DROP CONSTRAINT IF EXISTS chk_custodia_exclusiva;
+
+ALTER TABLE inventario.item
+ADD CONSTRAINT chk_item_asignacion
+CHECK (
+  (id_user_actual IS NULL AND id_area_actual IS NULL)
+  OR
+  (id_user_actual IS NOT NULL AND id_area_actual IS NOT NULL)
+);
+
+
+SELECT id_item, id_user_actual, id_area_actual
+FROM inventario.item
+WHERE (id_user_actual IS NULL) <> (id_area_actual IS NULL);
+
+
+UPDATE inventario.item
+SET id_user_actual = NULL,
+    id_area_actual = NULL
+WHERE (id_user_actual IS NULL) <> (id_area_actual IS NULL);

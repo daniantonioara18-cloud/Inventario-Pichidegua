@@ -435,6 +435,14 @@
               <div>{{ selectItem.descripcion || '—' }}</div>
             </div>
           </div>
+          <div class="col-md-6">
+              <div class="small text-muted fw-bold">Usuario asignado</div>
+              <div>{{ selectItem.usuario_asignado || '—' }}</div>
+            </div>
+          <div class="col-md-6">
+            <div class="small text-muted fw-bold">Área asignada</div>
+            <div>{{ selectItem.area_asignada || '—' }}</div>
+          </div>
 
           <hr class="my-3" />
 
@@ -515,23 +523,29 @@
       <div class="modal-body">
 
         <div class="mb-3">
-          <label class="form-label fw-bold small text-muted">Área</label>
-          <select class="form-select"
-              [(ngModel)]="formAsignar.destino_id_area"
-              name="asig_area">
-        <option [ngValue]="null">-- Seleccionar Área --</option>
-        <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">{{ a.nombre }}</option>
-      </select>
-        </div>
-
-        <div class="mb-3">
           <label class="form-label fw-bold small text-muted">Usuario</label>
           <select class="form-select"
-                [(ngModel)]="formAsignar.destino_id_usuario"
-                name="asig_usuario">
-          <option [ngValue]="null">-- Seleccionar Usuario --</option>
-          <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">{{ u.nombre }}</option>
-        </select>
+                  [(ngModel)]="formAsignar.destino_id_usuario"
+                  name="asig_usuario"
+                  (ngModelChange)="onAsignarUsuarioChange($event)">
+            <option [ngValue]="null">-- Seleccionar Usuario --</option>
+            <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">
+              {{ u.nombre }}
+            </option>
+       </select>
+      </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted">Área</label>
+          <select class="form-select"
+                  [(ngModel)]="formAsignar.destino_id_area"
+                  name="asig_area"
+                  [disabled]="true">
+            <option [ngValue]="null">-- Seleccionar Área --</option>
+            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
+              {{ a.nombre }}
+            </option>
+          </select>
         </div>
 
         <div class="mb-3">
@@ -560,6 +574,9 @@
 <!-- ========================= -->
 <!-- MODAL MOVER -->
 <!-- ========================= -->
+<!-- ========================= -->
+<!-- MODAL MOVER -->
+<!-- ========================= -->
 <div class="modal fade"
      [class.show]="showMoverModal"
      [style.display]="showMoverModal ? 'block' : 'none'"
@@ -573,35 +590,64 @@
       </div>
 
       <div class="modal-body">
+
+        <!-- USUARIO (primero) -->
         <div class="mb-3">
-          <label class="form-label small fw-bold text-muted">Área</label>
-          <select class="form-select" [(ngModel)]="formMover.destino_id_area" name="mv_area">
-            <option [ngValue]="null">-- Seleccionar Área --</option>
-            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">{{ a.nombre }}</option>
+          <label class="form-label fw-bold small text-muted">Usuario</label>
+          <select class="form-select"
+                  [(ngModel)]="formMover.destino_id_usuario"
+                  name="mv_usuario"
+                  (ngModelChange)="onMoverUsuarioChange($event)">
+            <option [ngValue]="null">-- Seleccionar Usuario --</option>
+
+            <!-- opcional: ocultar el mismo usuario actual -->
+            <option *ngFor="let u of usuarios"
+                    [ngValue]="u.id_usuario"
+                    [disabled]="u.id_usuario === selectItem?.id_user_actual">
+              {{ u.nombre }}
+            </option>
           </select>
+
+          <small class="text-muted d-block mt-1">
+            No puedes elegir el mismo usuario actual.
+          </small>
         </div>
 
+        <!-- ÁREA (después, auto) -->
         <div class="mb-3">
-          <label class="form-label small fw-bold text-muted">Usuario</label>
-          <select class="form-select" [(ngModel)]="formMover.destino_id_usuario" name="mv_usuario">
-            <option [ngValue]="null">-- Seleccionar Usuario --</option>
-            <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">{{ u.nombre }}</option>
+          <label class="form-label fw-bold small text-muted">Área</label>
+          <select class="form-select"
+                  [(ngModel)]="formMover.destino_id_area"
+                  name="mv_area"
+                  disabled>
+            <option [ngValue]="null">-- Área del usuario --</option>
+            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
+              {{ a.nombre }}
+            </option>
           </select>
+
+          <small class="text-muted d-block mt-1">
+            Se asigna automáticamente según el usuario.
+          </small>
         </div>
 
         <div class="mb-2">
           <label class="form-label small fw-bold text-muted">Observación</label>
-          <textarea class="form-control" rows="2" [(ngModel)]="formMover.observacion" name="mv_obs"></textarea>
+          <textarea class="form-control"
+                    rows="2"
+                    [(ngModel)]="formMover.observacion"
+                    name="mv_obs"></textarea>
         </div>
 
-        <small class="text-muted">
-          Regla: elige <b>solo usuario</b> o <b>solo área</b>.
-        </small>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-light" (click)="closeMover()">Cancelar</button>
-        <button class="btn btn-success" (click)="confirmarMover()">Confirmar Movimiento</button>
+        <button class="btn btn-success"
+                (click)="confirmarMover()"
+                [disabled]="formMover.destino_id_usuario == null">
+          Confirmar Movimiento
+        </button>
       </div>
 
     </div>

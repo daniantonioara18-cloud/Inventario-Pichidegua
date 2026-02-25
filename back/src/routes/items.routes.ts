@@ -77,6 +77,8 @@ router.get('/items/:id', async (req, res) => {
         sc.nombre AS subcategoria,
         m.nombre  AS marca,
         adq.nombre AS adquisicion,
+        u.nombre AS usuario_asignado,
+        a.nombre AS area_asignada,  
 
         ftt.id_ficha_tecno,
         ftt.serial,
@@ -100,6 +102,8 @@ router.get('/items/:id', async (req, res) => {
       LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion
       LEFT JOIN ${schema}.ficha_tecnica_tecno ftt   ON i.id_item = ftt.id_item
       LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
+      LEFT JOIN ${schema}.usuario u ON u.id_usuario = i.id_user_actual
+      LEFT JOIN ${schema}.area_municipal a ON a.id_area = i.id_area_actual
 
       WHERE i.id_item = $1
       LIMIT 1;
@@ -303,7 +307,7 @@ router.post('/items', async (req, res) => {
 });
 
 
-router.patch('/items/:id/asignar', async (req, res) => {
+router.post('/items/:id/asignar', async (req, res) => {
   const schema = process.env.DB_SCHEMA || 'inventario';
   const id_item = Number(req.params.id);
 
@@ -317,12 +321,12 @@ router.patch('/items/:id/asignar', async (req, res) => {
   if (!Number.isFinite(id_item)) return res.status(400).json({ message: 'ID inválido' });
   if (!id_registro_adm) return res.status(400).json({ message: 'Falta id_registro_adm' });
 
-  // solo uno
+  // Deben venir ambos
   const tieneUsuario = destino_id_usuario !== null && destino_id_usuario !== undefined;
   const tieneArea = destino_id_area !== null && destino_id_area !== undefined;
-  if ((tieneUsuario && tieneArea) || (!tieneUsuario && !tieneArea)) {
-    return res.status(400).json({ message: 'Debes enviar SOLO destino_id_usuario o SOLO destino_id_area' });
-  }
+  if (!tieneUsuario || !tieneArea) {
+  return res.status(400).json({ message: 'Debes enviar destino_id_usuario Y destino_id_area' });
+}
 
   const client = await pool.connect();
   try {
@@ -380,11 +384,7 @@ router.patch('/items/:id/asignar', async (req, res) => {
        SET id_user_actual = $1,
            id_area_actual = $2
        WHERE id_item = $3`,
-      [
-        tieneUsuario ? destino_id_usuario : null,
-        tieneArea ? destino_id_area : null,
-        id_item,
-      ]
+      [destino_id_usuario, destino_id_area, id_item]
     );
 
     await client.query('COMMIT');
@@ -399,13 +399,14 @@ router.patch('/items/:id/asignar', async (req, res) => {
   }
 });
 
+
 router.post('/items/:id/mover', async (req, res) => {
   const schema = process.env.DB_SCHEMA || 'inventario';
   const id_item = Number(req.params.id);
 
   const {
     destino_id_usuario = null,
-    destino_id_area = null,
+    destino_id_area = null, // opcional: si viene, la validamos contra el área real del usuario
     observacion = null,
     id_registro_adm,
   } = req.body;
@@ -414,19 +415,23 @@ router.post('/items/:id/mover', async (req, res) => {
   if (!id_registro_adm) return res.status(400).json({ message: 'Falta id_registro_adm' });
 
   const tieneUsuario = destino_id_usuario !== null && destino_id_usuario !== undefined;
-  const tieneArea = destino_id_area !== null && destino_id_area !== undefined;
-  if ((tieneUsuario && tieneArea) || (!tieneUsuario && !tieneArea)) {
-    return res.status(400).json({ message: 'Debes enviar SOLO destino_id_usuario o SOLO destino_id_area' });
+  if (!tieneUsuario) {
+    return res.status(400).json({ message: 'Debes enviar destino_id_usuario' });
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
+    // 1) Leer estado actual del item (bloqueo fila)
     const qItem = await client.query(
-      `SELECT id_user_actual, id_area_actual FROM ${schema}.item WHERE id_item = $1 FOR UPDATE`,
+      `SELECT id_user_actual, id_area_actual
+       FROM ${schema}.item
+       WHERE id_item = $1
+       FOR UPDATE`,
       [id_item]
     );
+
     if (qItem.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Item no encontrado' });
@@ -434,21 +439,56 @@ router.post('/items/:id/mover', async (req, res) => {
 
     const { id_user_actual, id_area_actual } = qItem.rows[0];
 
-    // si NO tiene custodia -> no mover
+    // 2) Si NO tiene custodia -> no mover
     if (id_user_actual === null && id_area_actual === null) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Este item aún no está asignado. Usa Asignar.' });
     }
 
-    const qTipo = await client.query(
-      `SELECT id_tipo_movimiento FROM ${schema}.tipo_movimiento WHERE nombre = 'TRASLADO' LIMIT 1`
+    // 3) No permitir mover al mismo usuario
+    if (Number(destino_id_usuario) === Number(id_user_actual)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'El item ya está asignado a ese usuario' });
+    }
+
+    // 4) Obtener área real del usuario destino (y validar que exista)
+    const qUser = await client.query(
+      `SELECT id_area
+       FROM ${schema}.usuario
+       WHERE id_usuario = $1`,
+      [destino_id_usuario]
     );
+
+    if (qUser.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'FK inválida (usuario no existe)' });
+    }
+
+    const areaRealDelUsuario = qUser.rows[0].id_area;
+
+    // Si el front mandó destino_id_area, validamos que calce (opcional, pero recomendado)
+    if (destino_id_area !== null && destino_id_area !== undefined) {
+      if (Number(destino_id_area) !== Number(areaRealDelUsuario)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'El usuario no pertenece a esa área' });
+      }
+    }
+
+    // 5) Tipo movimiento TRASLADO
+    const qTipo = await client.query(
+      `SELECT id_tipo_movimiento
+       FROM ${schema}.tipo_movimiento
+       WHERE nombre = 'TRASLADO'
+       LIMIT 1`
+    );
+
     const id_tipo_movimiento = qTipo.rows[0]?.id_tipo_movimiento;
     if (!id_tipo_movimiento) {
       await client.query('ROLLBACK');
       return res.status(500).json({ message: 'No existe tipo_movimiento TRASLADO' });
     }
 
+    // 6) Insertar movimiento (origen = actual, destino = nuevo)
     await client.query(
       `INSERT INTO ${schema}.movimiento (
         observacion, id_tipo_movimiento, id_item, id_registro_adm,
@@ -462,35 +502,36 @@ router.post('/items/:id/mover', async (req, res) => {
         id_registro_adm,
         id_area_actual,
         id_user_actual,
-        tieneArea ? destino_id_area : null,
-        tieneUsuario ? destino_id_usuario : null,
+        areaRealDelUsuario,
+        destino_id_usuario,
       ]
     );
 
+    // 7) Actualizar item: nuevo custodio (usuario + su área real)
     await client.query(
       `UPDATE ${schema}.item
        SET id_user_actual = $1,
            id_area_actual = $2
        WHERE id_item = $3`,
-      [
-        tieneUsuario ? destino_id_usuario : null,
-        tieneArea ? destino_id_area : null,
-        id_item,
-      ]
+      [destino_id_usuario, areaRealDelUsuario, id_item]
     );
 
     await client.query('COMMIT');
-    res.json({ message: 'Movido correctamente' });
+    return res.json({ message: 'Movido correctamente' });
   } catch (err: any) {
     try { await client.query('ROLLBACK'); } catch {}
     console.error(err);
-    if (err.code === '23503') return res.status(400).json({ message: 'FK inválida (usuario/área no existe)' });
+
+    // FK inválida (por ejemplo id_registro_adm no existe en user_adm)
+    if (err.code === '23503') {
+      return res.status(400).json({ message: 'FK inválida (usuario/área/admin no existe)' });
+    }
+
     return res.status(500).json({ message: 'Error moviendo' });
   } finally {
     client.release();
   }
 });
-
 
 
 

@@ -1,0 +1,153 @@
+<div class="container-fluid fade-in">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold text-secondary">Usuarios</h4>
+      <small class="text-muted">Gestiona los usuarios (trabajadores)</small>
+    </div>
+
+    <button class="btn btn-dark d-flex align-items-center gap-2 shadow-sm px-3"
+            style="border: none;"
+            (click)="openCreate()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="d-none d-sm-inline">Nuevo Usuario</span>
+    </button>
+  </div>
+
+  <div *ngIf="successMsg" class="alert alert-success shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMsg }}
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+
+      <div class="p-3 border-bottom bg-light">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Buscar por nombre, email, cargo..."
+              [(ngModel)]="searchText"
+              name="searchText"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="loading" class="text-center py-5 text-muted">
+        <div class="spinner-border text-success mb-2" role="status"></div>
+        <div>Cargando usuarios...</div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="ps-4 py-3 text-secondary text-uppercase small border-0">ID</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Nombre</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Email</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Cargo</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Área</th>
+              <th class="text-end pe-4 py-3 text-secondary text-uppercase small border-0">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let u of usuariosFiltrados">
+              <td class="ps-4 fw-bold text-primary">{{ u.id_usuario }}</td>
+              <td class="fw-semibold">{{ u.nombre }}</td>
+              <td class="text-muted">{{ u.email }}</td>
+              <td>{{ u.cargo || '—' }}</td>
+              <td>{{ u.area_nombre  ?? '—' }}</td>
+
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-light text-secondary border hover-shadow me-1"
+                        title="Editar"
+                        (click)="openEdit(u)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+
+                <button class="btn btn-sm btn-light text-danger border hover-shadow"
+                        title="Eliminar"
+                        (click)="delete(u)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="usuarios.length === 0">
+              <td colspan="6" class="text-center py-5 text-muted">
+                No hay usuarios registrados
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL CREAR/EDITAR -->
+  <div class="modal fade"
+       [class.show]="showModal"
+       [style.display]="showModal ? 'block' : 'none'"
+       tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold text-secondary">
+            {{ editMode ? 'Editar Usuario' : 'Nuevo Usuario' }}
+          </h5>
+          <button type="button" class="btn-close" (click)="closeModal()"></button>
+        </div>
+
+        <div class="modal-body pt-4">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Nombre</label>
+              <input class="form-control" [(ngModel)]="form.nombre" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Email</label>
+              <input class="form-control" [(ngModel)]="form.email" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Cargo</label>
+              <input class="form-control" [(ngModel)]="form.cargo" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Área</label>
+                    <select class="form-select" [(ngModel)]="form.id_area" name="id_area">
+                    <option [ngValue]="null">-- Seleccionar Área --</option>
+                    <option *ngFor="let a of areas" [ngValue]="a.id_area">
+                        {{ a.nombre }}
+                    </option>
+                        </select>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer border-top-0">
+          <button class="btn btn-light" (click)="closeModal()">Cancelar</button>
+          <button class="btn btn-success" (click)="save()" [disabled]="saving">
+            {{ saving ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop fade show" *ngIf="showModal"></div>
+</div>

@@ -5,6 +5,7 @@ import dbRoutes from './db.routes';
 import itemsRoutes from './items.routes';
 import catalogsRoutes from './catalogs.routes';
 import fichasRouter from './fichas.routes';
+import movimientoRoutes from './movimiento.routes';
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use(dbRoutes);
 router.use(itemsRoutes);
 router.use(catalogsRoutes);
 router.use(fichasRouter);
+router.use(movimientoRoutes);
 
 export default router;

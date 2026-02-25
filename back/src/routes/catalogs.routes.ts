@@ -104,10 +104,31 @@ router.get('/catalogs/areas', async (_req, res) => {
 });
 
 // Usuarios
+// Usuarios (con su área)
+
 router.get('/catalogs/usuarios', async (_req, res) => {
-  const r = await pool.query(`SELECT id_usuario, nombre FROM ${schema}.usuario ORDER BY nombre`);
-  res.json(r.rows);
+  try {
+    const sql = `
+      SELECT
+        u.id_usuario,
+        u.nombre,
+        u.email,
+        u.cargo,
+        u.id_area,
+        a.nombre AS area_nombre
+      FROM ${schema}.usuario u
+      LEFT JOIN ${schema}.area_municipal a ON a.id_area = u.id_area
+      ORDER BY u.nombre ASC;
+    `;
+    const r = await pool.query(sql);
+    res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al obtener usuarios' });
+  }
 });
+
+
 
 // Modos de adquisición
 router.get('/catalogs/adquisiciones', async (_req, res) => {
@@ -115,5 +136,29 @@ router.get('/catalogs/adquisiciones', async (_req, res) => {
   res.json(r.rows);
 });
 
+
+
+router.post('/catalogs/usuarios', async (req, res) => {
+  try {
+    const { nombre, email, cargo = null, id_area = null } = req.body;
+
+    if (!nombre || !email) {
+      return res.status(400).json({ message: 'Faltan nombre o email' });
+    }
+
+    const sql = `
+      INSERT INTO ${schema}.usuario (nombre, email, cargo, id_area)
+      VALUES ($1,$2,$3,$4)
+      RETURNING id_usuario, nombre, email, cargo, id_area
+    `;
+    const r = await pool.query(sql, [nombre, email, cargo, id_area]);
+    res.status(201).json(r.rows[0]);
+  } catch (err: any) {
+    console.error(err);
+    if (err?.code === '23505') return res.status(409).json({ message: 'Email ya existe' });
+    if (err?.code === '23503') return res.status(400).json({ message: 'Área inválida' });
+    res.status(500).json({ message: 'Error creando usuario' });
+  }
+});
 
 export default router;

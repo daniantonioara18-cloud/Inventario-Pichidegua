@@ -198,7 +198,7 @@ export class ItemsComponent implements OnInit {
     return !!(this.selectItem?.id_user_actual && this.selectItem?.id_area_actual);
   }
   get itemSinAsignacion(): boolean {
-  return !this.selectItem?.id_area_actual && !this.selectItem?.id_user_actual;
+  return !this.selectItem?.id_area_actual || !this.selectItem?.id_user_actual;
 }
 
   // =========================
@@ -603,39 +603,38 @@ export class ItemsComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+
   confirmarMover() {
-    if (!this.selectItem?.id_item) return;
+  if (!this.selectItem?.id_item) return;
 
-    const tieneUsuario = this.formMover.destino_id_usuario !== null && this.formMover.destino_id_usuario !== undefined;
-    const tieneArea = this.formMover.destino_id_area !== null && this.formMover.destino_id_area !== undefined;
-
-    if ((tieneUsuario && tieneArea) || (!tieneUsuario && !tieneArea)) {
-      this.errorDetail = 'Selecciona SOLO usuario o SOLO área para mover.';
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const payload = {
-      destino_id_usuario: this.formMover.destino_id_usuario,
-      destino_id_area: this.formMover.destino_id_area,
-      observacion: this.formMover.observacion || null,
-      id_registro_adm: 1,
-    };
-
-    this.api.moverIte(this.selectItem.id_item, payload).subscribe({
-      next: () => {
-        this.successMsg = 'Movido ✅';
-        this.closeMover();
-        this.loadItems();
-        this.openDetailModal({ id_item: this.selectItem.id_item });
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.errorDetail = err?.error?.message || 'Error moviendo';
-        this.cdr.detectChanges();
-      },
-    });
+  const user = this.formMover.destino_id_usuario;
+  if (user == null) {
+    this.errorDetail = 'Selecciona un usuario para mover.';
+    this.cdr.detectChanges();
+    return;
   }
+
+  const payload = {
+    destino_id_usuario: user,
+    // destino_id_area: this.formMover.destino_id_area, // opcional si quieres validación extra
+    observacion: this.formMover.observacion || null,
+    id_registro_adm: 1,
+  };
+
+  this.api.moverIte(this.selectItem.id_item, payload).subscribe({
+    next: () => {
+      this.successMsg = 'Movido ✅';
+      this.closeMover();
+      this.loadItems();
+      this.openDetailModal({ id_item: this.selectItem.id_item });
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      this.errorDetail = err?.error?.message || 'Error moviendo';
+      this.cdr.detectChanges();
+    },
+  });
+}
 
   // =========================
   // EDITAR (placeholder)
@@ -657,5 +656,33 @@ export class ItemsComponent implements OnInit {
     this.successMsg = 'Editar (pendiente) ✅';
     this.closeEditar();
     this.cdr.detectChanges();
+  }
+
+
+
+  onAsignarUsuarioChange(idUsuario: number | null) {
+  if (!idUsuario) {
+    this.formAsignar.destino_id_area = null;
+    this.cdr.detectChanges();
+    return;
+  }
+
+  const u = this.usuarios.find(x => x.id_usuario === idUsuario);
+  this.formAsignar.destino_id_area = u?.id_area ?? null;
+
+  this.cdr.detectChanges();
+}
+
+
+  private getAreaIdByUsuario(idUsuario: number | null): number | null {
+  if (idUsuario == null) return null;
+  const u = this.usuarios.find(x => Number(x.id_usuario) === Number(idUsuario));
+  return u?.id_area ?? null; // tu tabla usuario tiene id_area
+}
+
+  onMoverUsuarioChange(idUsuario: number | null) {
+  // setea el área automáticamente según el usuario seleccionado
+  this.formMover.destino_id_area = this.getAreaIdByUsuario(idUsuario);
+  this.cdr.detectChanges();
   }
 }
