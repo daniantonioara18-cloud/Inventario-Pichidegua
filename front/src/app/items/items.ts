@@ -650,14 +650,42 @@ export class ItemsComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  confirmarEditar() {
-    if (!this.selectItem?.id_item) return;
+ confirmarEditar() {
+  if (!this.selectItem?.id_item) return;
 
-    this.successMsg = 'Editar (pendiente) ✅';
-    this.closeEditar();
-    this.cdr.detectChanges();
-  }
+  const payload = {
+    nombre: this.formEditar.nombre,
+    modelo: this.formEditar.modelo || null,
+    descripcion: this.formEditar.descripcion || null,
+    vida_util_meses: this.formEditar.vida_util_meses,
+    condicion_fisica: this.formEditar.condicion_fisica,
+    id_marca: this.formEditar.id_marca,
+    id_adquisicion: this.formEditar.id_adquisicion,
+    id_subcategoria: this.formEditar.id_subcategoria,
+  };
 
+  this.api.updateItem(this.selectItem.id_item, payload).subscribe({
+    next: (updated) => {
+      this.successMsg = 'Item actualizado ✅';
+
+      // 1) actualizar el modal detalle
+      this.selectItem = updated;
+
+      // 2) actualizar también la tabla (items[]) sin recargar todo si quieres
+      const idx = this.items.findIndex(i => i.id_item === updated.id_item);
+      if (idx !== -1) {
+        this.items[idx] = { ...this.items[idx], ...updated };
+      }
+
+      this.closeEditar();
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      this.errorDetail = err?.error?.message || 'Error actualizando item';
+      this.cdr.detectChanges();
+    }
+  });
+}
 
 
   onAsignarUsuarioChange(idUsuario: number | null) {

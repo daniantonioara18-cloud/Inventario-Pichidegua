@@ -19,6 +19,10 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/items`);
   }
 
+  updateItem(id: number, data: any): Observable<any> {
+  return this.http.put(`${this.baseUrl}/items/${id}`, data);
+}
+
   getItemById(id: number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/items/${id}`);
   }
@@ -60,9 +64,6 @@ export class ApiService {
   moverIte(id:number,data:any){
     return this.http.post(`${this.baseUrl}/items/${id}/mover`, data);
   }
-  getUsuarios(): Observable<any[]> {
-  return this.http.get<any[]>(`${this.baseUrl}/catalogs/usuarios`);
-}
 
 getMovimientos(params?: { q?: string; tipo?: string; limit?: number; offset?: number }) {
   const q = params?.q ? `q=${encodeURIComponent(params.q)}` : '';
@@ -74,7 +75,12 @@ getMovimientos(params?: { q?: string; tipo?: string; limit?: number; offset?: nu
   return this.http.get<any[]>(`${this.baseUrl}/movimientos${query ? '?' + query : ''}`);
 }
 
-createUsuario(data: any): Observable<any> {
+
+getUsuarios() {
+  return this.http.get<any[]>(`${this.baseUrl}/usuarios`);
+}
+
+createUsuario(data: any) {
   return this.http.post(`${this.baseUrl}/usuarios`, data);
 }
 
@@ -82,8 +88,12 @@ updateUsuario(id: number, data: any): Observable<any> {
   return this.http.put(`${this.baseUrl}/usuarios/${id}`, data);
 }
 
+
+
 deleteUsuario(id: number): Observable<any> {
   return this.http.delete(`${this.baseUrl}/usuarios/${id}`);
 }
+
+
 
 }

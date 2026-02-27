@@ -6,6 +6,7 @@ import itemsRoutes from './items.routes';
 import catalogsRoutes from './catalogs.routes';
 import fichasRouter from './fichas.routes';
 import movimientoRoutes from './movimiento.routes';
+import usuarioRoutes from   './usuarios.routes';
 
 const router = Router();
 
@@ -15,5 +16,7 @@ router.use(itemsRoutes);
 router.use(catalogsRoutes);
 router.use(fichasRouter);
 router.use(movimientoRoutes);
+router.use(usuarioRoutes);
+
 
 export default router;

@@ -20,6 +20,7 @@ areas: any[] = [];
 
 
 
+
 loadAreas() {
   this.api.getAreas().subscribe({
     next: (data) => this.areas = data,
@@ -102,6 +103,10 @@ loadAreas() {
     this.cdr.detectChanges();
   }
 
+
+
+
+
   openEdit(u: any) {
     this.editMode = true;
     this.successMsg = '';
@@ -124,14 +129,78 @@ loadAreas() {
 
   // ===== GUARDAR (placeholder si aún no tienes backend CRUD) =====
 
-  save() {
-    // Si todavía NO tienes POST/PUT en el back, deja esto bloqueado con mensaje claro.
-    this.error = 'Aún no existe backend CRUD (/usuarios). Solo listado por ahora.';
+save() {
+  this.error = '';
+  this.successMsg = '';
+  this.saving = true;
+  this.cdr.detectChanges();
+
+  const payload = {
+    nombre: this.form.nombre.trim(),
+    email: this.form.email.trim(),
+    cargo: this.form.cargo?.trim() || null,
+    id_area: this.form.id_area,
+  };
+
+  // validación mínima
+  if (!payload.nombre || !payload.email) {
+    this.error = 'Faltan nombre o email';
+    this.saving = false;
     this.cdr.detectChanges();
+    return;
   }
 
+  // ===== EDIT =====
+  if (this.editMode && this.form.id_usuario) {
+    this.api.updateUsuario(this.form.id_usuario, payload).subscribe({
+      next: (usuarioActualizado: any) => {
+        const idx = this.usuarios.findIndex(u => u.id_usuario === this.form.id_usuario);
+        if (idx !== -1) this.usuarios[idx] = { ...this.usuarios[idx], ...usuarioActualizado };
+
+        this.successMsg = 'Usuario actualizado ';
+        this.closeModal();
+        this.saving = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = err?.error?.message || 'Error actualizando usuario';
+        this.saving = false;
+        this.cdr.detectChanges();
+      }
+    });
+    return;
+  }
+
+  // ===== CREATE =====
+  this.api.createUsuario(payload).subscribe({
+    next: (nuevoUsuario: any) => {
+      this.usuarios.unshift(nuevoUsuario);
+      this.successMsg = 'Usuario creado ✅';
+      this.closeModal();
+      this.saving = false;
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      this.error = err?.error?.message || 'Error creando usuario';
+      this.saving = false;
+      this.cdr.detectChanges();
+    }
+  });
+}
+
   delete(u: any) {
-    this.error = 'Aún no existe backend DELETE (/usuarios/:id).';
-    this.cdr.detectChanges();
+      if (!confirm(`¿Eliminar usuario ${u.nombre}?`)) return;
+
+        this.api.deleteUsuario(u.id_usuario).subscribe({
+          next: () => {
+            this.usuarios = this.usuarios.filter(x => x.id_usuario !== u.id_usuario);
+            this.successMsg = 'Usuario eliminado correctamente';
+            this.cdr.detectChanges();
+    },
+    error: (err) => {
+      this.error = err?.error?.message || 'Error eliminando usuario';
+      this.cdr.detectChanges();
+    }
+  });
   }
 }

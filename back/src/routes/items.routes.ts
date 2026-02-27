@@ -534,6 +534,85 @@ router.post('/items/:id/mover', async (req, res) => {
 });
 
 
+router.put('/items/:id', async (req, res) => {
+  try {
+    const schema = process.env.DB_SCHEMA || 'inventario';
+    const id_item = Number(req.params.id);
+
+    if (!Number.isFinite(id_item)) {
+      return res.status(400).json({ message: 'ID inválido' });
+    }
+
+    const {
+      nombre,
+      modelo = null,
+      descripcion = null,
+      vida_util_meses = null,
+      condicion_fisica = null,
+      id_marca = null,
+      id_adquisicion = null,
+      id_subcategoria = null,
+    } = req.body;
+
+    if (!nombre) return res.status(400).json({ message: 'Falta nombre' });
+
+    const sql = `
+      UPDATE ${schema}.item
+      SET nombre = $1,
+          modelo = $2,
+          descripcion = $3,
+          vida_util_meses = $4,
+          condicion_fisica = $5,
+          id_marca = $6,
+          id_adquisicion = $7,
+          id_subcategoria = $8
+      WHERE id_item = $9
+      RETURNING id_item;
+    `;
+
+    const r = await pool.query(sql, [
+      nombre, modelo, descripcion, vida_util_meses,
+      condicion_fisica, id_marca, id_adquisicion, id_subcategoria,
+      id_item
+    ]);
+
+    if (r.rowCount === 0) return res.status(404).json({ message: 'Item no encontrado' });
+
+    // devolver el item completo (como tu GET /items/:id)
+    const full = await pool.query(
+      `SELECT 
+        i.id_item, i.codigo_interno, i.nombre, i.modelo, i.descripcion, i.vida_util_meses,
+        i.condicion_fisica, i.activo,
+        i.id_subcategoria, i.id_marca, i.id_adquisicion,
+        i.id_user_actual, i.id_area_actual,
+        c.nombre AS categoria,
+        sc.nombre AS subcategoria,
+        m.nombre AS marca,
+        adq.nombre AS adquisicion,
+        ftt.id_ficha_tecno, ftt.serial, ftt.procesador, ftt.memoria_ram, ftt.disco_duro,
+        ftt.direccion_ip, ftt.sistema_operativo, ftt.host_name,
+        ftm.id_ficha_mueble, ftm.material, ftm.color, ftm.dimensiones
+      FROM ${schema}.item i
+      JOIN ${schema}.subcategoria sc ON i.id_subcategoria = sc.id_subcategoria
+      JOIN ${schema}.categoria c ON sc.id_categoria = c.id_categoria
+      LEFT JOIN ${schema}.marca m ON i.id_marca = m.id_marca
+      LEFT JOIN ${schema}.modo_adquisicion adq ON adq.id_adquisicion = i.id_adquisicion
+      LEFT JOIN ${schema}.ficha_tecnica_tecno ftt ON i.id_item = ftt.id_item
+      LEFT JOIN ${schema}.ficha_tecnica_muebles ftm ON i.id_item = ftm.id_item
+      WHERE i.id_item = $1
+      LIMIT 1;`,
+      [id_item]
+    );
+
+    return res.json(full.rows[0]);
+  } catch (err: any) {
+    console.error(err);
+    if (err?.code === '23503') return res.status(400).json({ message: 'FK inválida (revisa ids)' });
+    return res.status(500).json({ message: 'Error actualizando item' });
+  }
+});
+
+
 
 
 

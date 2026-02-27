@@ -141,7 +141,7 @@
         <div class="modal-footer border-top-0">
           <button class="btn btn-light" (click)="closeModal()">Cancelar</button>
           <button class="btn btn-success" (click)="save()" [disabled]="saving">
-            {{ saving ? 'Guardando...' : 'Guardar' }}
+           {{ saving ? 'Guardando...' : (editMode ? 'Guardar cambios' : 'Guardar') }}
           </button>
         </div>
 
