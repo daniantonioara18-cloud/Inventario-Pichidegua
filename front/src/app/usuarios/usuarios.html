@@ -2,7 +2,6 @@
 
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h4 class="mb-0 fw-bold text-secondary">Usuarios</h4>
       <small class="text-muted">Gestiona los usuarios (trabajadores)</small>
     </div>
 
@@ -66,6 +65,14 @@
               <td>{{ u.area_nombre  ?? '—' }}</td>
 
               <td class="text-end pe-4">
+                <!-- Botón Exportar -->
+                <button class="btn btn-sm btn-light text-success border hover-shadow me-1"
+                        title="Exportar asignaciones y movimientos"
+                        (click)="exportarUsuario(u)"
+                        [disabled]="exportandoId === u.id_usuario">
+                  <i class="bi" [ngClass]="exportandoId === u.id_usuario ? 'bi-hourglass-split' : 'bi-file-earmark-excel'"></i>
+                </button>
+                
                 <button class="btn btn-sm btn-light text-secondary border hover-shadow me-1"
                         title="Editar"
                         (click)="openEdit(u)">

@@ -1,65 +1,58 @@
-<div class="container-fluid fade-in">
-  
-  <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid fade-in p-4">
+
+  <!-- ============================= -->
+  <!-- HEADER: TÍTULO Y ACCIONES     -->
+  <!-- ============================= -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
-      <h4 class="mb-0 fw-bold text-secondary">Gestión de Inventario</h4>
       <small class="text-muted">Visualiza y administra los bienes municipales</small>
     </div>
 
-    <button class="btn btn-dark d-flex align-items-center gap-2 shadow-sm px-3" 
-            style="border: none;"
-            (click)="openTipoModal()">
-      <i class="bi bi-plus-lg"></i>
-      <span class="d-none d-sm-inline">Nuevo Item</span>
-    </button>
-  </div>
-  
-<!-- ============================= -->
-<!-- MODAL PREVIO: Elegir tipo -->
-<!-- ============================= -->
-<div class="modal fade"
-     [class.show]="showTipoModal"
-     [style.display]="showTipoModal ? 'block' : 'none'"
-     tabindex="-1">
-  <div class="modal-dialog modal-sm modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-success d-flex align-items-center gap-2" 
+              (click)="exportarExcel()" 
+              [disabled]="exporting">
+        <i class="bi bi-file-earmark-excel"></i>
+        <span>{{ exporting ? 'Generando...' : 'Exportar Excel' }}</span>
+      </button>
+
+      <!-- Input oculto para importar (compartido entre header y modal) -->
+      <input 
+        type="file" 
+        #fileInput
+        accept=".xlsx,.xls" 
+        style="display: none"
+        (change)="onFileSelected($event); fileInput.value = ''">
       
-      <div class="modal-header border-bottom-0">
-        <h6 class="modal-title fw-bold">
-          ¿Qué tipo de item deseas agregar?
-        </h6>
-        <button type="button"
-                class="btn-close"
-                (click)="closeTipoModal()">
-        </button>
-      </div>
+      <!-- Botón Importar: abre modal primero, luego dispara input -->
+      <button class="btn btn-outline-secondary d-flex align-items-center gap-2" 
+              (click)="openImportModal(); fileInput.click()" 
+              [disabled]="importando">
+        <span *ngIf="!importando">📤 Importar Excel</span>
+        <span *ngIf="importando">⏳ Importando...</span>
+      </button>
 
-      <div class="modal-body text-center">
-        
-        <button class="btn btn-outline-dark w-100 mb-2"
-                (click)="seleccionarTipo('TECNO')">
-          <i class="bi bi-laptop me-2"></i>
-          Electrónico / Tecnología
-        </button>
+      <button class="btn btn-outline-dark d-flex align-items-center gap-2" 
+              (click)="descargarPlantilla()">
+        📋 Descargar Plantilla
+      </button>
 
-        <button class="btn btn-outline-dark w-100"
-                (click)="seleccionarTipo('MUEBLE')">
-          <i class="bi bi-building me-2"></i>
-          Inmueble / Mobiliario
-        </button>
+      <button class="btn btn-outline-info d-flex align-items-center gap-2" 
+              (click)="abrirEscaner()">
+        📷 Escaner
+      </button>
 
-      </div>
-
+      <button class="btn btn-primary d-flex align-items-center gap-2" 
+              (click)="openTipoModal()">
+        <i class="bi bi-plus-lg"></i>
+        <span>Nuevo Item</span>
+      </button>
     </div>
   </div>
-</div>
 
-<div class="modal-backdrop fade show" *ngIf="showTipoModal"></div>
-
-
-  
-
-
+  <!-- ============================= -->
+  <!-- ALERTAS                       -->
+  <!-- ============================= -->
   <div *ngIf="successMsg" class="alert alert-success shadow-sm py-2 mb-3 border-0 d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> {{ successMsg }}
   </div>
@@ -67,42 +60,85 @@
     <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorItems }}
   </div>
 
+  <!-- ============================= -->
+  <!-- CARD PRINCIPAL: TABLA         -->
+  <!-- ============================= -->
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
-      <div class="p-3 border-bottom bg-light">
-      <div class="row g-2 align-items-center">
-        
-        <div class="col-md-6">
-          <input
-            type="text"
-            class="form-control"
-            placeholder="Buscar por código, nombre, modelo o marca..."
-            [(ngModel)]="searchText"
-            name="searchText"
-          />
-        </div>
-
-        <div class="col-md-3">
-          <select
-            class="form-select"
-            [(ngModel)]="filtros.activo"
-            name="filtroActivo"
-          >
-            <option [ngValue]="null">Todos</option>
-            <option [ngValue]="true">Operativos</option>
-            <option [ngValue]="false">Baja</option>
-          </select>
-        </div>
-
-      </div>
-    </div>
-
       
+      <!-- Filtros mejorados -->
+      <div class="p-3 border-bottom bg-light">
+        <div class="row g-2 align-items-end">
+          <!-- Buscador -->
+          <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted mb-1">Buscar</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input
+                type="text"
+                class="form-control border-start-0"
+                placeholder="Código, nombre, modelo o marca..."
+                [(ngModel)]="searchText"
+                name="searchText"
+              />
+            </div>
+          </div>
+          
+          <!-- Filtro Estado -->
+          <div class="col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Estado</label>
+            <select class="form-select" [(ngModel)]="filtros.activo" name="filtroActivo">
+              <option [ngValue]="null">Todos</option>
+              <option [ngValue]="true">Operativos</option>
+              <option [ngValue]="false">Baja</option>
+            </select>
+          </div>
+          
+          <!-- Filtro Custodio -->
+          <div class="col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Custodio</label>
+            <select class="form-select" [(ngModel)]="filtros.custodio" name="filtroCustodio">
+              <option [ngValue]="null">Todos</option>
+              <option [ngValue]="true">Con asignación</option>
+              <option [ngValue]="false">Sin asignar</option>
+            </select>
+          </div>
+          
+          <!-- Filtro Categoría -->
+          <div class="col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Categoría</label>
+            <select class="form-select" [(ngModel)]="filtros.subcategoria" name="filtroSubcategoria">
+              <option [ngValue]="null">Todas</option>
+              <option *ngFor="let sc of catalogos.subcategorias" [ngValue]="sc.id_subcategoria">
+                {{ sc.nombre }}
+              </option>
+            </select>
+          </div>
+          
+          <!-- Botón limpiar filtros -->
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" (click)="limpiarFiltros()">
+              <i class="bi bi-x-circle me-1"></i> Limpiar
+            </button>
+          </div>
+        </div>
+        
+        <!-- Resumen de resultados -->
+        <div class="mt-2 d-flex gap-3 small text-muted">
+          <span><strong>{{ itemsFiltrados.length }}</strong> items encontrados</span>
+          <span *ngIf="itemsFiltrados.length !== items.length">(de {{ items.length }} total)</span>
+        </div>
+      </div>
+
+      <!-- Loading -->
       <div *ngIf="loadingItems" class="text-center py-5 text-muted">
         <div class="spinner-border text-success mb-2" role="status"></div>
         <div>Cargando inventario...</div>
       </div>
 
+      <!-- Tabla -->
       <div class="table-responsive" *ngIf="!loadingItems">
         <table class="table table-hover align-middle mb-0">
           <thead class="bg-light">
@@ -110,13 +146,14 @@
               <th class="ps-4 py-3 text-secondary text-uppercase small border-0">Código</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Bien</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Categoría</th>
-              <th class="py-3 text-secondary text-uppercase small border-0">Modo de adquisición</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Adquisición</th>
               <th class="py-3 text-secondary text-uppercase small border-0">Estado</th>
+              <th class="py-3 text-secondary text-uppercase small border-0">Custodio</th>
               <th class="text-end pe-4 py-3 text-secondary text-uppercase small border-0">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of itemsFiltrados;">
+            <tr *ngFor="let item of itemsFiltrados">
               <td class="ps-4 fw-bold text-primary">{{ item.codigo_interno }}</td>
               <td>
                 <div class="fw-bold text-dark">{{ item.nombre }}</div>
@@ -130,27 +167,80 @@
                 <span class="badge bg-light text-dark border">{{ item.adquisicion }}</span>
               </td>
               <td>
-                <span class="badge border" [ngClass]="item.activo ? 'bg-success-subtle text-success border-success-subtle' : 'bg-danger-subtle text-danger border-danger-subtle'">
+                <span class="badge border" 
+                      [ngClass]="item.activo ? 'bg-success-subtle text-success border-success-subtle' : 'bg-danger-subtle text-danger border-danger-subtle'">
                   {{ item.activo ? 'Operativo' : 'Baja' }}
                 </span>
               </td>
+              <td>
+                <span class="badge border" 
+                      [ngClass]="item.id_user_actual ? 'bg-primary-subtle text-primary border-primary-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'">
+                  <i class="bi" [ngClass]="item.id_user_actual ? 'bi-person-check' : 'bi-person-x'"></i>
+                  {{ item.id_user_actual ? 'Asignado' : 'Sin asignar' }}
+                </span>
+              </td>
               <td class="text-end pe-4">
-                <button class="btn btn-sm btn-light text-secondary border hover-shadow" title="Ver Detalle" (click)="openDetailModal(item)">
+                <button class="btn btn-sm btn-light text-secondary border hover-shadow me-1" 
+                        title="Ver Detalle" 
+                        (click)="openDetailModal(item)">
                   <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-dark border hover-shadow" 
+                        title="Etiqueta QR/Barra" 
+                        (click)="abrirEtiqueta(item.id_item)">
+                  🏷️
                 </button>
               </td>
             </tr>
             <tr *ngIf="items.length === 0">
-              <td colspan="6" class="text-center py-5 text-muted">No hay items registrados</td>
+              <td colspan="7" class="text-center py-5 text-muted">No hay items registrados</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
-  
-  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+
+  <!-- ============================= -->
+  <!-- MODAL: ELEGIR TIPO DE ITEM    -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showTipoModal"
+       [style.display]="showTipoModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-bottom-0">
+          <h6 class="modal-title fw-bold">¿Qué tipo de item deseas agregar?</h6>
+          <button type="button" class="btn-close" (click)="closeTipoModal()"></button>
+        </div>
+        <div class="modal-body text-center">
+          <button class="btn btn-outline-dark w-100 mb-2"
+                  (click)="seleccionarTipo('TECNO')">
+            <i class="bi bi-laptop me-2"></i>
+            Electrónico / Tecnología
+          </button>
+          <button class="btn btn-outline-dark w-100"
+                  (click)="seleccionarTipo('MUEBLE')">
+            <i class="bi bi-building me-2"></i>
+            Inmueble / Mobiliario
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showTipoModal"></div>
+
+  <!-- ============================= -->
+  <!-- MODAL: CREAR NUEVO ITEM       -->
+  <!-- ============================= -->
+  <div class="modal fade" 
+       [class.show]="showCreateModal" 
+       [style.display]="showCreateModal ? 'block' : 'none'" 
+       tabindex="-1" 
+       role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
       <div class="modal-content border-0 shadow-lg">
         
         <div class="modal-header border-bottom-0 pb-0">
@@ -159,7 +249,6 @@
         </div>
 
         <div class="modal-body pt-4">
-          
           <div *ngIf="loadingCatalogs" class="text-center py-4 text-muted">
             <div class="spinner-border spinner-border-sm text-success mb-2"></div>
             <div>Cargando opciones...</div>
@@ -167,6 +256,8 @@
 
           <form (ngSubmit)="create()" *ngIf="!loadingCatalogs">
             <div class="row g-3">
+              
+              <!-- Código y Nombre -->
               <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Código Interno <span class="text-danger">*</span></label>
                 <input class="form-control" [(ngModel)]="form.codigo_interno" name="codigo_interno" placeholder="Ej: TIC-001" required />
@@ -176,81 +267,93 @@
                 <input class="form-control" [(ngModel)]="form.nombre" name="nombre" placeholder="Ej: Notebook HP..." required />
               </div>
 
+              <!-- Modelo y Marca -->
               <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Modelo</label>
                 <input class="form-control" [(ngModel)]="form.modelo" name="modelo" />
               </div>
-             <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted">Marca</label>
-
-                  <div class="d-flex gap-2">
-                    <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
-                      <option [ngValue]="null">-- Seleccionar --</option>
-                      <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">
-                        {{ m.nombre }}
-                      </option>
-                    </select>
-
-                    <!-- Botón solo cuando el tipo seleccionado es MUEBLE -->
-                    <button
-                      *ngIf="tiposSeleccionado === 'MUEBLE'"
-                      type="button"
-                      class="btn btn-outline-secondary"
-                      (click)="openAddMarca()">
-                      + Agregar
-                    </button>
-                  </div>
-
-                  <!-- Mini input inline (sin cambiar el estilo del modal) -->
-                  <div *ngIf="showAddMarca && tiposSeleccionado === 'MUEBLE'" class="mt-2">
-                    <div class="input-group">
-                      <input
-                        type="text"
-                        class="form-control"
-                        placeholder="Nombre de marca (mueble)"
-                        [(ngModel)]="newMarcaNombre"
-                        name="newMarcaNombre"
-                      />
-
-                      <button
-                        type="button"
-                        class="btn btn-success"
-                        (click)="guardarMarca()"
-                        [disabled]="savingMarca || !newMarcaNombre.trim()">
-                        <span *ngIf="savingMarca" class="spinner-border spinner-border-sm me-2"></span>
-                        Guardar
-                      </button>
-
-                      <button
-                        type="button"
-                        class="btn btn-light"
-                        (click)="cancelAddMarca()">
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Marca</label>
+                <div class="d-flex gap-2">
+                  <select class="form-select" [(ngModel)]="form.id_marca" name="id_marca">
+                    <option [ngValue]="null">-- Seleccionar --</option>
+                    <option *ngFor="let m of catalogos.marcas" [ngValue]="m.id_marca">
+                      {{ m.nombre }}
+                    </option>
+                  </select>
+                  <button *ngIf="tiposSeleccionado === 'MUEBLE'"
+                          type="button"
+                          class="btn btn-outline-secondary"
+                          (click)="openAddMarca()">
+                    + Agregar
+                  </button>
                 </div>
 
-
-              <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted">Subcategoría <span class="text-danger">*</span></label>
-                <select class="form-select" [(ngModel)]="form.id_subcategoria" name="id_subcategoria" required>
-                  <option [ngValue]="null">-- Seleccionar Tipo --</option>
-                  <option *ngFor="let sc of subcategoriasFiltradas" [ngValue]="sc.id_subcategoria">
-                    {{ sc.categoria }} - {{ sc.nombre }}
-                  </option>
-                </select>
+                <!-- Inline add marca -->
+                <div *ngIf="showAddMarca && tiposSeleccionado === 'MUEBLE'" class="mt-2">
+                  <div class="input-group">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Nombre de marca (mueble)"
+                           [(ngModel)]="newMarcaNombre"
+                           name="newMarcaNombre" />
+                    <button type="button"
+                            class="btn btn-success"
+                            (click)="guardarMarca()"
+                            [disabled]="savingMarca || !newMarcaNombre.trim()">
+                      <span *ngIf="savingMarca" class="spinner-border spinner-border-sm me-2"></span>
+                      Guardar
+                    </button>
+                    <button type="button" class="btn btn-light" (click)="cancelAddMarca()">Cancelar</button>
+                  </div>
+                </div>
               </div>
 
+              <!-- Subcategoría -->
+              <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Subcategoría <span class="text-danger">*</span></label>
+                <div *ngIf="!showAddSubcat" class="d-flex gap-2">
+                  <select [(ngModel)]="form.id_subcategoria" name="id_subcategoria" class="form-select">
+                    <option [ngValue]="null">-- Seleccione --</option>
+                    <option *ngFor="let sc of subcategoriasFiltradas" [value]="sc.id_subcategoria">
+                      {{ sc.nombre }}
+                    </option>
+                  </select>
+                  <button type="button"
+                          class="btn btn-outline-success"
+                          (click)="openAddSubcat()"
+                          [disabled]="addingSub"
+                          title="Nueva subcategoría">
+                    <span *ngIf="!addingSub">+</span>
+                    <span *ngIf="addingSub" class="spinner-border spinner-border-sm"></span>
+                  </button>
+                </div>
+                <div *ngIf="showAddSubcat" class="mt-2">
+                  <div class="input-group">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Nombre de la nueva subcategoría"
+                           [(ngModel)]="newSubcatNombre"
+                           name="newSubcatNombre" />
+                    <button type="button"
+                            class="btn btn-success"
+                            (click)="guardarSubcategoriaRapida()"
+                            [disabled]="addingSub || !newSubcatNombre.trim()">
+                      <span *ngIf="addingSub" class="spinner-border spinner-border-sm me-2"></span>
+                      Guardar
+                    </button>
+                    <button type="button" class="btn btn-light" (click)="cancelAddSubcat()">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Descripción -->
               <div class="col-md-12">
                 <label class="form-label small fw-bold text-muted">Descripción</label>
                 <textarea class="form-control" rows="2" [(ngModel)]="form.descripcion" name="descripcion"></textarea>
               </div>
 
-              <!-- ============================= -->
-              <!-- FICHA TÉCNICA (según tipo) -->
-              <!-- ============================= -->
-
+              <!-- Ficha Técnica Header -->
               <div class="col-12">
                 <hr class="my-2" />
                 <div class="fw-bold text-secondary">Ficha técnica</div>
@@ -259,30 +362,28 @@
                 </small>
               </div>
 
-                    <!-- TECNO -->
-                    <div class="row g-3" *ngIf="tiposSeleccionado === 'TECNO'">
-                      <div class="col-md-6">
-                        <label class="form-label small fw-bold text-muted">Serial</label>
-                        <input class="form-control" [(ngModel)]="fichaTecno.serial" name="ft_serial" />
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label small fw-bold text-muted">Procesador</label>
-                        <input class="form-control" [(ngModel)]="fichaTecno.procesador" name="ft_procesador" />
-                      </div>
-
-                    <div class="col-md-4">
-                      <label class="form-label small fw-bold text-muted">Memoria RAM</label>
-                      <input class="form-control" [(ngModel)]="fichaTecno.memoria_ram" name="ft_ram" />
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label small fw-bold text-muted">Disco duro</label>
-                      <input class="form-control" [(ngModel)]="fichaTecno.disco_duro" name="ft_disco" />
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label small fw-bold text-muted">Dirección IP</label>
-                      <input class="form-control" [(ngModel)]="fichaTecno.direccion_ip" name="ft_ip" />
-                    </div>
-
+              <!-- Ficha TECNO -->
+              <div class="row g-3" *ngIf="tiposSeleccionado === 'TECNO'">
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-muted">Serial</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.serial" name="ft_serial" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-muted">Procesador</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.procesador" name="ft_procesador" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Memoria RAM</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.memoria_ram" name="ft_ram" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Disco duro</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.disco_duro" name="ft_disco" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Dirección IP</label>
+                  <input class="form-control" [(ngModel)]="fichaTecno.direccion_ip" name="ft_ip" />
+                </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-bold text-muted">Sistema Operativo</label>
                   <input class="form-control" [(ngModel)]="fichaTecno.sistema_operativo" name="ft_so" />
@@ -293,24 +394,23 @@
                 </div>
               </div>
 
-                <!-- MUEBLE -->
-                <div class="row g-3" *ngIf="tiposSeleccionado === 'MUEBLE'">
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Material</label>
-                    <input class="form-control" [(ngModel)]="fichaMueble.material" name="fm_material" />
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Color</label>
-                    <input class="form-control" [(ngModel)]="fichaMueble.color" name="fm_color" />
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Dimensiones</label>
-                    <input class="form-control" [(ngModel)]="fichaMueble.dimensiones" name="fm_dimensiones" />
-                  </div>
+              <!-- Ficha MUEBLE -->
+              <div class="row g-3" *ngIf="tiposSeleccionado === 'MUEBLE'">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Material</label>
+                  <input class="form-control" [(ngModel)]="fichaMueble.material" name="fm_material" />
                 </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Color</label>
+                  <input class="form-control" [(ngModel)]="fichaMueble.color" name="fm_color" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Dimensiones</label>
+                  <input class="form-control" [(ngModel)]="fichaMueble.dimensiones" name="fm_dimensiones" />
+                </div>
+              </div>
 
-
-
+              <!-- Condición, Adquisición, Vida útil -->
               <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted">Condición</label>
                 <select class="form-select" [(ngModel)]="form.condicion_fisica" name="condicion_fisica">
@@ -348,410 +448,592 @@
             {{ creating ? 'Guardando...' : 'Guardar Item' }}
           </button>
         </div>
-
       </div>
     </div>
   </div>
-
+  <div class="modal-backdrop fade show" *ngIf="showCreateModal"></div>
 
   <!-- ============================= -->
-<!-- MODAL DETALLE ITEM -->
-<!-- ============================= -->
-<div class="modal fade"
-     [class.show]="showDetailModal"
-     [style.display]="showDetailModal ? 'block' : 'none'"
-     tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
+  <!-- MODAL: DETALLE DEL ITEM       -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showDetailModal"
+       [style.display]="showDetailModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
 
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold text-secondary">
-          Detalle del Item
-        </h5>
-        <button type="button" class="btn-close" (click)="closeDetailModal()"></button>
-      </div>
-
-      <div class="modal-body pt-4">
-
-        <div *ngIf="loadingDetail" class="text-center py-4 text-muted">
-          <div class="spinner-border spinner-border-sm text-success mb-2"></div>
-          <div>Cargando detalle...</div>
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold text-secondary">Detalle del Item</h5>
+          <button type="button" class="btn-close" (click)="closeDetailModal()"></button>
         </div>
 
-        <div *ngIf="errorDetail" class="alert alert-danger border-0">
-          {{ errorDetail }}
-        </div>
-
-        <div *ngIf="!loadingDetail && selectItem">
-
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Código Interno</div>
-              <div class="fw-semibold">{{ selectItem.codigo_interno }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Nombre</div>
-              <div class="fw-semibold">{{ selectItem.nombre }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Modelo</div>
-              <div>{{ selectItem.modelo || 'S/M' }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Marca</div>
-              <div>{{ selectItem.marca || 'Sin marca' }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Categoría</div>
-              <div>{{ selectItem.categoria }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Subcategoría</div>
-              <div>{{ selectItem.subcategoria }}</div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="small text-muted fw-bold">Modo adquisición</div>
-              <div>{{ selectItem.adquisicion || 'N/A' }}</div>
-            </div>
-
-            <div class="col-md-3">
-              <div class="small text-muted fw-bold">Condición</div>
-              <div>{{ selectItem.condicion_fisica || 'N/A' }}</div>
-            </div>
-
-            <div class="col-md-3">
-              <div class="small text-muted fw-bold">Vida útil</div>
-              <div>{{ selectItem.vida_util_meses ?? 'N/A' }}</div>
-            </div>
-
-            <div class="col-12">
-              <div class="small text-muted fw-bold">Descripción</div>
-              <div>{{ selectItem.descripcion || '—' }}</div>
-            </div>
-          </div>
-          <div class="col-md-6">
-              <div class="small text-muted fw-bold">Usuario asignado</div>
-              <div>{{ selectItem.usuario_asignado || '—' }}</div>
-            </div>
-          <div class="col-md-6">
-            <div class="small text-muted fw-bold">Área asignada</div>
-            <div>{{ selectItem.area_asignada || '—' }}</div>
+        <div class="modal-body pt-4">
+          <div *ngIf="loadingDetail" class="text-center py-4 text-muted">
+            <div class="spinner-border spinner-border-sm text-success mb-2"></div>
+            <div>Cargando detalle...</div>
           </div>
 
-          <hr class="my-3" />
+          <div *ngIf="errorDetail" class="alert alert-danger border-0">
+            {{ errorDetail }}
+          </div>
 
-          <!-- FICHA TECNO si existe -->
-          <div *ngIf="selectItem.id_ficha_tecno">
-            <div class="fw-bold text-secondary mb-2">Ficha técnica (Tecnología)</div>
+          <div *ngIf="!loadingDetail && selectItem">
             <div class="row g-3">
-              <div class="col-md-6"><div class="small text-muted fw-bold">Serial</div>{{ selectItem.serial || '—' }}</div>
-              <div class="col-md-6"><div class="small text-muted fw-bold">Procesador</div>{{ selectItem.procesador || '—' }}</div>
-              <div class="col-md-4"><div class="small text-muted fw-bold">RAM</div>{{ selectItem.memoria_ram || '—' }}</div>
-              <div class="col-md-4"><div class="small text-muted fw-bold">Disco</div>{{ selectItem.disco_duro || '—' }}</div>
-              <div class="col-md-4"><div class="small text-muted fw-bold">IP</div>{{ selectItem.direccion_ip || '—' }}</div>
-              <div class="col-md-6"><div class="small text-muted fw-bold">SO</div>{{ selectItem.sistema_operativo || '—' }}</div>
-              <div class="col-md-6"><div class="small text-muted fw-bold">Host</div>{{ selectItem.host_name || '—' }}</div>
+              
+              <!-- Información General -->
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Código Interno</div>
+                <div class="fw-semibold">{{ selectItem.codigo_interno }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Nombre</div>
+                <div class="fw-semibold">{{ selectItem.nombre }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Modelo</div>
+                <div>{{ selectItem.modelo || 'S/M' }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Marca</div>
+                <div>{{ selectItem.marca || 'Sin marca' }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Categoría</div>
+                <div>{{ selectItem.categoria }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Subcategoría</div>
+                <div>{{ selectItem.subcategoria }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Modo adquisición</div>
+                <div>{{ selectItem.adquisicion || 'N/A' }}</div>
+              </div>
+              <div class="col-md-3">
+                <div class="small text-muted fw-bold">Condición</div>
+                <div>{{ selectItem.condicion_fisica || 'N/A' }}</div>
+              </div>
+              <div class="col-md-3">
+                <div class="small text-muted fw-bold">Vida útil</div>
+                <div>{{ selectItem.vida_util_meses ?? 'N/A' }}</div>
+              </div>
+              <div class="col-12">
+                <div class="small text-muted fw-bold">Descripción</div>
+                <div>{{ selectItem.descripcion || '—' }}</div>
+              </div>
+
+              <!-- Asignación -->
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Usuario asignado</div>
+                <div>{{ selectItem.usuario_asignado || '—' }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="small text-muted fw-bold">Área asignada</div>
+                <div>{{ selectItem.area_asignada || '—' }}</div>
+              </div>
+            </div>
+
+            <hr class="my-3" />
+
+            <!-- Ficha Técnica TECNO -->
+            <div *ngIf="selectItem.id_ficha_tecno">
+              <div class="fw-bold text-secondary mb-2">Ficha técnica (Tecnología)</div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="small text-muted fw-bold">Serial</div>
+                  <div>{{ selectItem.serial || '—' }}</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="small text-muted fw-bold">Procesador</div>
+                  <div>{{ selectItem.procesador || '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">RAM</div>
+                  <div>{{ selectItem.memoria_ram || '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">Disco</div>
+                  <div>{{ selectItem.disco_duro || '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">IP</div>
+                  <div>{{ selectItem.direccion_ip || '—' }}</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="small text-muted fw-bold">SO</div>
+                  <div>{{ selectItem.sistema_operativo || '—' }}</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="small text-muted fw-bold">Host</div>
+                  <div>{{ selectItem.host_name || '—' }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ficha Técnica MUEBLE -->
+            <div *ngIf="selectItem.id_ficha_mueble">
+              <div class="fw-bold text-secondary mb-2">Ficha técnica (Mobiliario)</div>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">Material</div>
+                  <div>{{ selectItem.material || '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">Color</div>
+                  <div>{{ selectItem.color || '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                  <div class="small text-muted fw-bold">Dimensiones</div>
+                  <div>{{ selectItem.dimensiones || '—' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-light text-secondary" (click)="closeDetailModal()">Cerrar</button>
+          <button type="button" class="btn btn-outline-dark" (click)="openEditar()">Editar</button>
+          <button type="button" class="btn btn-outline-dark" (click)="openMover()">Mover</button>
+          <button type="button" 
+                  class="btn btn-success text-white" 
+                  (click)="openAsignar()"
+                  *ngIf="!itemEstaAsignado"
+                  style="background-color: var(--muni-primary);">
+            Asignar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showDetailModal"></div>
+
+  <!-- ============================= -->
+  <!-- MODAL: IMPORTAR EXCEL         -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showImportModal"
+       [style.display]="showImportModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Importar Items desde Excel</h5>
+          <button type="button" class="btn-close" (click)="closeImportModal()"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+              Descarga la plantilla, llénala y súbela aquí.
+              <a href="#" class="fw-bold ms-1" (click)="$event.preventDefault(); descargarPlantilla()">
+                Descargar plantilla
+              </a>
             </div>
           </div>
 
-          <!-- FICHA MUEBLE si existe -->
-          <div *ngIf="selectItem.id_ficha_mueble">
-            <div class="fw-bold text-secondary mb-2">Ficha técnica (Mobiliario)</div>
-            <div class="row g-3">
-              <div class="col-md-4"><div class="small text-muted fw-bold">Material</div>{{ selectItem.material || '—' }}</div>
-              <div class="col-md-4"><div class="small text-muted fw-bold">Color</div>{{ selectItem.color || '—' }}</div>
-              <div class="col-md-4"><div class="small text-muted fw-bold">Dimensiones</div>{{ selectItem.dimensiones || '—' }}</div>
+          <!-- Input file visible dentro del modal -->
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Seleccionar archivo Excel</label>
+            <input type="file" 
+                   class="form-control" 
+                   accept=".xlsx,.xls"
+                   (change)="onFileSelected($event)" />
+          </div>
+
+          <!-- Vista previa -->
+          <div *ngIf="importPreview.length > 0" class="mb-3">
+            <div class="fw-bold small text-muted mb-2">Vista previa ({{ importPreview.length }} filas)</div>
+            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="bg-light sticky-top">
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Subcategoría</th>
+                    <th>Marca</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of importPreview">
+                    <td>{{ row.codigo_interno }}</td>
+                    <td>{{ row.nombre }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="row.tipo === 'TECNO' ? 'bg-primary' : 'bg-warning text-dark'">
+                        {{ row.tipo }}
+                      </span>
+                    </td>
+                    <td>{{ row.subcategoria }}</td>
+                    <td>{{ row.marca }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
+          <!-- Resultado importación -->
+          <div *ngIf="importResultado" class="mt-3">
+            <div class="alert border-0"
+                 [ngClass]="importResultado.fallidos === 0 ? 'alert-success' : 'alert-warning'">
+              <div class="fw-bold mb-2">
+                ✅ {{ importResultado.exitosos }} exitosos
+                <span *ngIf="importResultado.fallidos > 0"> · ⚠️ {{ importResultado.fallidos }} con errores</span>
+              </div>
+              <div *ngFor="let r of importResultado.resultados" class="small">
+                <span *ngIf="r.estado === 'error'" class="text-danger">
+                  Fila {{ r.fila }} ({{ r.codigo }}): {{ r.mensaje }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-light" (click)="closeImportModal()">Cerrar</button>
+          <button class="btn btn-success"
+                  (click)="confirmarImport()"
+                  [disabled]="importPreview.length === 0 || importando">
+            <span *ngIf="importando" class="spinner-border spinner-border-sm me-2"></span>
+            {{ importando ? 'Importando...' : 'Importar ' + importPreview.length + ' items' }}
+          </button>
         </div>
       </div>
-
-      <div class="modal-footer border-top-0">
-        <button type="button" class="btn btn-light text-secondary" (click)="closeDetailModal()">
-          Cerrar
-        </button>
-
-        <!-- Estos 3 ahora pueden abrir otros modales -->
-        <button type="button" class="btn btn-outline-dark" (click)="openEditar()" >
-          Editar
-        </button>
-
-        <button type="button"
-        class="btn btn-outline-dark"
-        (click)="openMover()">
-          Mover
-        </button>
-
-        <button type="button"
-        class="btn btn-success text-white"
-        (click)="openAsignar()"
-        *ngIf="!itemEstaAsignado"
-        style="background-color: var(--muni-primary);">
-          Asignar
-        </button>
-
-      </div>
-
     </div>
   </div>
-</div>
+  <div class="modal-backdrop fade show" *ngIf="showImportModal"></div>
 
+  <!-- ============================= -->
+  <!-- MODAL: ASIGNAR ITEM           -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showAsignarModal"
+       [style.display]="showAsignarModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
 
-<!-- ============================= -->
-<!-- MODAL ASIGNAR -->
-<!-- ============================= -->
-<div class="modal fade"
-     [class.show]="showAsignarModal"
-     [style.display]="showAsignarModal ? 'block' : 'none'"
-     tabindex="-1">
-
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">Asignar Item</h5>
-        <button type="button" class="btn-close" (click)="closeAsignar()"></button>
-      </div>
-
-      <div class="modal-body">
-
-        <div class="mb-3">
-          <label class="form-label fw-bold small text-muted">Usuario</label>
-          <select class="form-select"
-                  [(ngModel)]="formAsignar.destino_id_usuario"
-                  name="asig_usuario"
-                  (ngModelChange)="onAsignarUsuarioChange($event)">
-            <option [ngValue]="null">-- Seleccionar Usuario --</option>
-            <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">
-              {{ u.nombre }}
-            </option>
-       </select>
-      </div>
-
-        <div class="mb-3">
-          <label class="form-label fw-bold small text-muted">Área</label>
-          <select class="form-select"
-                  [(ngModel)]="formAsignar.destino_id_area"
-                  name="asig_area"
-                  [disabled]="true">
-            <option [ngValue]="null">-- Seleccionar Área --</option>
-            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
-              {{ a.nombre }}
-            </option>
-          </select>
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Asignar Item</h5>
+          <button type="button" class="btn-close" (click)="closeAsignar()"></button>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label small text-muted">Observación</label>
-          <textarea class="form-control"
-                    rows="2"
-                    [(ngModel)]="formAsignar.observacion">
-          </textarea>
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-light" (click)="closeAsignar()">Cancelar</button>
-        <button class="btn btn-success"
-                (click)="confirmarAsignar()">
-          Confirmar Asignación
-        </button>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-
-<!-- ========================= -->
-<!-- MODAL MOVER -->
-<!-- ========================= -->
-<!-- ========================= -->
-<!-- MODAL MOVER -->
-<!-- ========================= -->
-<div class="modal fade"
-     [class.show]="showMoverModal"
-     [style.display]="showMoverModal ? 'block' : 'none'"
-     tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">Mover Item</h5>
-        <button type="button" class="btn-close" (click)="closeMover()"></button>
-      </div>
-
-      <div class="modal-body">
-
-        <!-- USUARIO (primero) -->
-        <div class="mb-3">
-          <label class="form-label fw-bold small text-muted">Usuario</label>
-          <select class="form-select"
-                  [(ngModel)]="formMover.destino_id_usuario"
-                  name="mv_usuario"
-                  (ngModelChange)="onMoverUsuarioChange($event)">
-            <option [ngValue]="null">-- Seleccionar Usuario --</option>
-
-            <!-- opcional: ocultar el mismo usuario actual -->
-            <option *ngFor="let u of usuarios"
-                    [ngValue]="u.id_usuario"
-                    [disabled]="u.id_usuario === selectItem?.id_user_actual">
-              {{ u.nombre }}
-            </option>
-          </select>
-
-          <small class="text-muted d-block mt-1">
-            No puedes elegir el mismo usuario actual.
-          </small>
-        </div>
-
-        <!-- ÁREA (después, auto) -->
-        <div class="mb-3">
-          <label class="form-label fw-bold small text-muted">Área</label>
-          <select class="form-select"
-                  [(ngModel)]="formMover.destino_id_area"
-                  name="mv_area"
-                  disabled>
-            <option [ngValue]="null">-- Área del usuario --</option>
-            <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
-              {{ a.nombre }}
-            </option>
-          </select>
-
-          <small class="text-muted d-block mt-1">
-            Se asigna automáticamente según el usuario.
-          </small>
-        </div>
-
-        <div class="mb-2">
-          <label class="form-label small fw-bold text-muted">Observación</label>
-          <textarea class="form-control"
-                    rows="2"
-                    [(ngModel)]="formMover.observacion"
-                    name="mv_obs"></textarea>
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-light" (click)="closeMover()">Cancelar</button>
-        <button class="btn btn-success"
-                (click)="confirmarMover()"
-                [disabled]="formMover.destino_id_usuario == null">
-          Confirmar Movimiento
-        </button>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop fade show" *ngIf="showMoverModal"></div>
-
-<!-- ============================= -->
-<!-- MODAL EDITAR -->
-<!-- ============================= -->
-<div class="modal fade"
-     [class.show]="showEditarModal"
-     [style.display]="showEditarModal ? 'block' : 'none'"
-     tabindex="-1">
-
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">Editar Item</h5>
-        <button type="button" class="btn-close" (click)="closeEditar()"></button>
-      </div>
-
-      <div class="modal-body">
-
-        <div class="row g-3">
-
-          <div class="col-md-6">
-            <label class="form-label small fw-bold text-muted">Nombre</label>
-            <input class="form-control"
-                   [(ngModel)]="formEditar.nombre">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Usuario</label>
+            <select class="form-select"
+                    [(ngModel)]="formAsignar.destino_id_usuario"
+                    name="asig_usuario"
+                    (ngModelChange)="onAsignarUsuarioChange($event)">
+              <option [ngValue]="null">-- Seleccionar Usuario --</option>
+              <option *ngFor="let u of usuarios" [ngValue]="u.id_usuario">
+                {{ u.nombre }}
+              </option>
+            </select>
           </div>
 
-          <div class="col-md-6">
-            <label class="form-label small fw-bold text-muted">Modelo</label>
-            <input class="form-control"
-                   [(ngModel)]="formEditar.modelo">
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Área</label>
+            <select class="form-select"
+                    [(ngModel)]="formAsignar.destino_id_area"
+                    name="asig_area"
+                    [disabled]="true">
+              <option [ngValue]="null">-- Seleccionar Área --</option>
+              <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
+                {{ a.nombre }}
+              </option>
+            </select>
           </div>
 
-          <div class="col-md-12">
-            <label class="form-label small fw-bold text-muted">Descripción</label>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Observación</label>
             <textarea class="form-control"
                       rows="2"
-                      [(ngModel)]="formEditar.descripcion">
+                      [(ngModel)]="formAsignar.observacion"
+                      name="asig_observacion">
             </textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-light" (click)="closeAsignar()">Cancelar</button>
+          <button class="btn btn-success" (click)="confirmarAsignar()">Confirmar Asignación</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showAsignarModal"></div>
+
+  <!-- ============================= -->
+  <!-- MODAL: MOVER ITEM             -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showMoverModal"
+       [style.display]="showMoverModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Mover Item</h5>
+          <button type="button" class="btn-close" (click)="closeMover()"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Usuario</label>
+            <select class="form-select"
+                    [(ngModel)]="formMover.destino_id_usuario"
+                    name="mv_usuario"
+                    (ngModelChange)="onMoverUsuarioChange($event)">
+              <option [ngValue]="null">-- Seleccionar Usuario --</option>
+              <option *ngFor="let u of usuarios"
+                      [ngValue]="u.id_usuario"
+                      [disabled]="u.id_usuario === selectItem?.id_user_actual">
+                {{ u.nombre }}
+              </option>
+            </select>
+            <small class="text-muted d-block mt-1">No puedes elegir el mismo usuario actual.</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Área</label>
+            <select class="form-select"
+                    [(ngModel)]="formMover.destino_id_area"
+                    name="mv_area"
+                    disabled>
+              <option [ngValue]="null">-- Área del usuario --</option>
+              <option *ngFor="let a of catalogos.areas" [ngValue]="a.id_area">
+                {{ a.nombre }}
+              </option>
+            </select>
+            <small class="text-muted d-block mt-1">Se asigna automáticamente según el usuario.</small>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold text-muted">Observación</label>
+            <textarea class="form-control"
+                      rows="2"
+                      [(ngModel)]="formMover.observacion"
+                      name="mv_obs"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-light" (click)="closeMover()">Cancelar</button>
+          <button class="btn btn-success"
+                  (click)="confirmarMover()"
+                  [disabled]="formMover.destino_id_usuario == null">
+            Confirmar Movimiento
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showMoverModal"></div>
+
+  <!-- ============================= -->
+  <!-- MODAL: EDITAR ITEM            -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="showEditarModal"
+       [style.display]="showEditarModal ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Editar Item</h5>
+          <button type="button" class="btn-close" (click)="closeEditar()"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Nombre</label>
+              <input class="form-control" [(ngModel)]="formEditar.nombre" name="edit_nombre">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Modelo</label>
+              <input class="form-control" [(ngModel)]="formEditar.modelo" name="edit_modelo">
+            </div>
+            <!-- Condición física -->
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Condición física</label>
+              <select class="form-select" [(ngModel)]="formEditar.condicion_fisica" name="edit_condicion">
+                <option value="Nuevo">Nuevo</option>
+                <option value="Bueno">Bueno</option>
+                <option value="Regular">Regular</option>
+                <option value="Malo">Malo</option>
+              </select>
+            </div>
+
+            <!-- Estado operativo -->
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-muted">Estado</label>
+              <select class="form-select" [(ngModel)]="formEditar.activo" name="edit_activo">
+                <option [ngValue]="true">Operativo</option>
+                <option [ngValue]="false">De baja</option>
+              </select>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label small fw-bold text-muted">Descripción</label>
+              <textarea class="form-control"
+                        rows="2"
+                        [(ngModel)]="formEditar.descripcion"
+                        name="edit_descripcion"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-light" (click)="closeEditar()">Cancelar</button>
+          <button class="btn btn-outline-dark" (click)="confirmarEditar()">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showEditarModal"></div>
+
+  <!-- ============================= -->
+  <!-- MODAL: ETIQUETA QR/BARRA       -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="mostrarEtiqueta"
+       [style.display]="mostrarEtiqueta ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+      <div class="modal-content border-0 shadow-lg">
+
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold text-success">🏷️ Etiqueta Municipal</h5>
+          <button type="button" class="btn-close" (click)="cerrarEtiqueta()"></button>
+        </div>
+
+        <div class="modal-body pt-3 text-center" *ngIf="itemEtiqueta">
+          
+          <!-- Etiqueta para imprimir -->
+<div id="area-impresion" class="mx-auto" style="width: 72mm; background: white;">
+  
+  <div style="border: 2px solid #000; padding: 8px;">
+    
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 8px;">
+      <img src="/assets/image/Pichidegua_Verde.png" alt="Logo" style="height: 50px; width: auto; object-fit: contain;">
+    </div>
+  
+    <!-- QR -->
+    <div style="text-align: center; margin: 6px 0;">
+      <img [src]="qrUrl" alt="QR" width="130" height="130" />
+      <div style="font-size: 8px; color: #666;">Escanea para ver ficha</div>
+    </div>
+
+              <!-- Datos -->
+              <div style="font-size: 10px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 2px 0;">
+                  <span style="font-weight: bold;">CÓDIGO:</span>
+                  <span style="color: #059669; font-weight: bold;">{{ itemEtiqueta.codigo_interno }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 2px 0;">
+                  <span style="font-weight: bold;">BIEN:</span>
+                  <span style="text-align: right; max-width: 60%;">{{ itemEtiqueta.nombre }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 2px 0;">
+                  <span style="font-weight: bold;">CAT:</span>
+                  <span>{{ itemEtiqueta.categoria }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+                  <span style="font-weight: bold;">EST:</span>
+                  <span [ngClass]="{
+                    'text-success': itemEtiqueta.condicion_fisica === 'Bueno' || itemEtiqueta.condicion_fisica === 'Nuevo',
+                    'text-warning': itemEtiqueta.condicion_fisica === 'Regular',
+                    'text-danger': itemEtiqueta.condicion_fisica === 'Malo'
+                  }">{{ itemEtiqueta.condicion_fisica }}</span>
+                </div>
+              </div>
+
+              <div style="font-size: 7px; color: #999; text-align: center; margin-top: 4px; word-break: break-all;">
+                {{ itemEtiqueta.uuid_qr }}
+              </div>
+            </div>
           </div>
 
         </div>
 
-      </div>
+        <div class="modal-footer border-top-0">
+          <button class="btn btn-light" (click)="cerrarEtiqueta()">Cerrar</button>
+          <button class="btn btn-success" (click)="imprimirEtiqueta()">🖨️ Imprimir</button>
+          <button class="btn btn-outline-secondary" (click)="descargarQR()">💾 QR</button>
+        </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-light" (click)="closeEditar()">Cancelar</button>
-        <button class="btn btn-outline-dark"
-                (click)="confirmarEditar()">
-          Guardar Cambios
-        </button>
       </div>
-
     </div>
   </div>
-</div>
+  <div class="modal-backdrop fade show" *ngIf="mostrarEtiqueta"></div>
 
+  <!-- ============================= -->
+  <!-- MODAL: ESCANER QR/BARRA       -->
+  <!-- ============================= -->
+  <div class="modal fade"
+       [class.show]="mostrarEscaner"
+       [style.display]="mostrarEscaner ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content border-0 shadow-lg">
 
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">📷 Escanear Código</h5>
+          <button type="button" class="btn-close" (click)="cerrarEscaner()"></button>
+        </div>
 
+        <div class="modal-body text-center">
+          
+          <!-- Video cámara -->
+          <div class="position-relative bg-dark rounded overflow-hidden mb-3" style="height: 280px;">
+            <video #videoElement class="w-100 h-100" style="object-fit: cover;"></video>
+            <div class="position-absolute top-50 start-0 end-0" 
+                 style="height: 2px; background: #dc3545; box-shadow: 0 0 6px #dc3545; animation: scan 2s infinite;">
+            </div>
+          </div>
 
+          <!-- Ingreso manual -->
+          <div class="mb-3">
+            <p class="text-muted small mb-2">O ingresa el código manualmente:</p>
+            <div class="input-group">
+              <input type="text" class="form-control" [(ngModel)]="codigoManual" 
+                     placeholder="MUB-035 o UUID..." (keyup.enter)="buscarManual()">
+              <button class="btn btn-success" (click)="buscarManual()">Buscar</button>
+            </div>
+          </div>
 
+          <!-- Resultado -->
+          <div *ngIf="itemEscaneado" class="alert alert-success">
+            <strong>{{ itemEscaneado.codigo_interno }}</strong> — {{ itemEscaneado.nombre }}
+            <br>
+            <span class="badge bg-primary">{{ itemEscaneado.condicion_fisica }}</span>
+            <div class="mt-2">
+              <button class="btn btn-sm btn-primary" (click)="verItemEscaneado()">Ver ficha completa</button>
+            </div>
+          </div>
+          <div *ngIf="errorEscaner" class="alert alert-danger">{{ errorEscaner }}</div>
+          <div *ngIf="cargandoEscaner" class="text-muted">
+            <span class="spinner-border spinner-border-sm me-2"></span>Buscando...
+          </div>
 
-
-
-<div class="modal-backdrop fade show" *ngIf="showEditarModal"></div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div class="modal-backdrop fade show" *ngIf="showMoverModal"></div>
-
-
-
-
-
-
-
-<div class="modal-backdrop fade show" *ngIf="showAsignarModal"></div>
-
-
-
-
-
-
-
-
-<div class="modal-backdrop fade show" *ngIf="showDetailModal"></div>
-
-  <div class="modal-backdrop fade show" *ngIf="showCreateModal"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="mostrarEscaner"></div>
 
 </div>

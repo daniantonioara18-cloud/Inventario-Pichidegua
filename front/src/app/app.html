@@ -1,15 +1,20 @@
-<app-navbar class="layout-navbar fixed-top"></app-navbar>
+<!-- Si es login, solo el router-outlet SIN layout -->
+<ng-container *ngIf="isLogin">
+  <router-outlet></router-outlet>
+</ng-container>
 
-<aside class="layout-sidebar d-none d-lg-block">
-  <app-sidebar></app-sidebar>
-</aside>
-
-<main class="layout-content">
-  <div class="fade-in">
-    <router-outlet></router-outlet>
-  </div>
+<!-- Si NO es login, muestra layout completo -->
+<ng-container *ngIf="!isLogin">
   
-  <div class="mt-5">
-    <app-footer></app-footer>
-  </div>
-</main>
+  <!-- NAVBAR FIJO ARRIBA -->
+  <app-navbar class="app-navbar"></app-navbar>
+  
+  <!-- SIDEBAR FIJO A LA IZQUIERDA -->
+  <app-sidebar class="app-sidebar"></app-sidebar>
+  
+  <!-- CONTENIDO CON SCROLL -->
+  <main class="content-area">
+    <router-outlet></router-outlet>
+  </main>
+  
+</ng-container>

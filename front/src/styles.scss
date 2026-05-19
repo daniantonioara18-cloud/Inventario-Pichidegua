@@ -80,3 +80,9 @@ body {
   font-weight: 600;
   i { color: var(--muni-primary); }
 }
+
+/* Prevenir que el iframe de impresión afecte el layout */
+iframe[style*="opacity: 0"] {
+  position: fixed !important;
+  border: none !important;
+}

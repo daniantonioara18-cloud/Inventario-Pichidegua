@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "@types/multer": "^2.1.0",
+    "@types/xlsx": "^0.0.35",
+    "concurrently": "^9.2.1"
+  },
+  "scripts": {
+    "dev": "concurrently --names \"BACK,FRONT\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix back\" \"npm start --prefix front\""
+  },
+  "dependencies": {
+    "multer": "^2.1.1",
+    "typescript": "^6.0.3",
+    "xlsx": "^0.18.5"
+  }
+}

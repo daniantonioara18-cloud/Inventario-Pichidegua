@@ -1,11 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-
+import subcategoriaRoutes from './routes/subcategoria.routes';
 import apiRouter from './routes';
 import { env } from './config/env';
 import { notFound } from './middlewares/notFound';
 import { errorHandler } from './middlewares/errorHandler';
+
 
 const app = express();
 
@@ -20,7 +21,7 @@ app.get('/', (_req, res) => {
 
 // Rutas API
 app.use('/api', apiRouter);
-
+app.use('/api', subcategoriaRoutes);
 // 404 y errores globales
 app.use(notFound);
 app.use(errorHandler);

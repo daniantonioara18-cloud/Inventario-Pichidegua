@@ -1,7 +1,73 @@
 .navbar {
   min-height: 60px;
   background: #0C9471;
-  color:azure
+  color: azure;
+    position: sticky;   /* ← NUEVO */
+  top: 0;             /* ← NUEVO */
+  z-index: 1020;      /* ← NUEVO (menor que el modal 1050) */
 }
 
+/* Menú de usuario alineado */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
+/* Texto de bienvenida */
+.welcome-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Botón Cerrar Sesión */
+.btn-logout {
+  background: #fff;
+  color: #ff0000f8;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  i {
+    font-size: 0.9rem;
+  }
+
+  &:hover {
+    background: #f1f5f9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* Avatar del usuario */
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  color: #0C9471;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}

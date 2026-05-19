@@ -1,24 +1,28 @@
 .sidebar {
-  background: #139e7a!important;
+  background: #139e7a !important;
+  min-height: 100%;
+  height: 100%;
   border-right: 1px solid #e9ecef;
-  min-height: calc(100vh - 60px - 48px); // navbar(60) + footer(48)
-  ;
 }
 
 .list-group-item {
   border: 0;
   border-radius: 10px;
   margin-bottom: 6px;
-  background:#139e7a!important; ;
+  background: #139e7a !important;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
 }
 
 .list-group-item.active-menu {
-  background-color: #21dfb0 !important; /* azul bootstrap */
+  background-color: #21dfb0 !important;
   color: #fff !important;
   font-weight: 600;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
-
 
 .list-group-item.active-menu i {
   color: #fff !important;

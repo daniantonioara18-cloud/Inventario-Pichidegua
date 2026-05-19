@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, Observable,of } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
 import { ApiService } from './api';
 
@@ -25,11 +25,11 @@ export class CatalogsService {
 
   constructor(private api: ApiService) {}
 
-  // ✅ Base: se carga 1 vez y listo
+  // ✅ Base: se carga 1 vez y se guarda en cache
   getAllBase(): Observable<CatalogosBase> {
     if (!this.cacheBase$) {
       this.cacheBase$ = forkJoin({
-        marcas: of([] as Marca[]), // <-- no cargamos marcas aquí porque dependen del tipo, se cargan en getMarcasByTipo
+        marcas: of([] as Marca[]), 
         areas: this.api.getAreas(),
         adquisiciones: this.api.getAdquisiciones(),
         subcategorias: this.api.getSubcategorias(),
@@ -46,11 +46,18 @@ export class CatalogsService {
     return this.marcasCache[tipo]!;
   }
 
-  // ✅ Crear marca y “romper” el cache de ese tipo para recargar
+  // ✅ Crear marca
   createMarca(nombre: string, tipo: 'TECNO' | 'MUEBLE') {
     return this.api.createMarca(nombre, tipo);
   }
 
+  // 🆕 NUEVO: Crear subcategoría 
+  // Llama al ApiService y permite actualizar el catálogo de la Muni
+  createSubcategoria(nombre: string, id_categoria: number) {
+    return this.api.createSubcategoria(nombre, id_categoria);
+  }
+
+  // ✅ Rompe el cache base para forzar la recarga de subcategorías, áreas, etc.
   invalidateBase() {
     this.cacheBase$ = undefined;
   }

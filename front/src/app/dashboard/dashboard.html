@@ -1,0 +1,99 @@
+<div class="dashboard-container">
+  <header class="page-header">
+    <h1>📊 Panel de Inventario Municipal</h1>
+    <p>Pichidegua - Resumen General</p>
+  </header>
+
+  <div *ngIf="error" class="error-state">
+    <p>❌ {{ error }}</p>
+    <button (click)="ngOnInit()">Reintentar</button>
+  </div>
+
+  <div *ngIf="loading && !error" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando datos...</p>
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <div class="cards-grid">
+      <div class="card card-primary">
+        <div class="card-icon-bg">
+          <span>📦</span>
+        </div>
+        <div class="card-content">
+          <h3>{{ totalItems }}</h3>
+          <p>Total de Bienes</p>
+        </div>
+      </div>
+
+      <div class="card card-warning">
+        <div class="card-icon-bg">
+          <span>⚠️</span>
+        </div>
+        <div class="card-content">
+          <h3>{{ sinCustodio }}</h3>
+          <p>Sin Custodio Asignado</p>
+        </div>
+      </div>
+
+      <div class="card card-success">
+        <div class="card-icon-bg">
+          <span>👥</span>
+        </div>
+        <div class="card-content">
+          <h3>{{ totalUsuarios }}</h3>
+          <p>Usuarios Registrados</p>
+        </div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-icon-bg">
+          <span>🔄</span>
+        </div>
+        <div class="card-content">
+          <h3>{{ totalMovimientos }}</h3>
+          <p>Movimientos Realizados</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-section">
+      <div class="section-header">
+        <h2>📈 Distribución por Categoría</h2>
+      </div>
+      
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th>Cantidad</th>
+              <th>Porcentaje</th>
+              <th>Distribución</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cat of porCategoria">
+              <td>
+                <span class="category-tag">{{ cat.categoria }}</span>
+              </td>
+              <td class="number-cell">{{ cat.total }}</td>
+              <td class="number-cell">{{ ((cat.total / totalItems) * 100).toFixed(1) }}%</td>
+              <td class="bar-cell">
+                <div class="progress-track">
+                  <div class="progress-fill" 
+                       [style.width.%]="(cat.total / totalItems) * 100">
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="porCategoria.length === 0" class="empty-state">
+        <p>No hay datos de categorías disponibles</p>
+      </div>
+    </div>
+  </ng-container>
+</div>

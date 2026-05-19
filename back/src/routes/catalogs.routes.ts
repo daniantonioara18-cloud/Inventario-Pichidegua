@@ -1,25 +1,10 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { pool } from '../config/db';
 
 const router = Router();
-
 const schema = process.env.DB_SCHEMA || 'inventario';
 
-// Marcas
-// router.get('/catalogs/marcas', async (_req, res) => {
-//   try {
-//     // Esta consulta es la que conecta con las marcas que tu amigo insertó
-//     const result = await pool.query(`SELECT * FROM ${schema}.marca ORDER BY nombre ASC`);
-//     res.json(result.rows);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Error al obtener marcas' });
-//   }
-// });
-// Marcas (con filtro opcional por tipo)
-
-
-
+// --- MARCAS ---
 // GET /catalogs/marcas?tipo=TECNO|MUEBLE
 router.get('/catalogs/marcas', async (req, res) => {
   try {
@@ -44,12 +29,10 @@ router.get('/catalogs/marcas', async (req, res) => {
   }
 });
 
-// Crear marca (para el botón "Agregar marca")
-// POST /catalogs/marcas  { nombre, tipo }
+// POST /catalogs/marcas
 router.post('/catalogs/marcas', async (req, res) => {
   try {
     const { nombre, tipo } = req.body;
-
     if (!nombre || !tipo) return res.status(400).json({ error: 'Falta nombre o tipo' });
 
     const t = String(tipo).toUpperCase();
@@ -61,26 +44,22 @@ router.post('/catalogs/marcas', async (req, res) => {
        RETURNING id_marca, nombre, tipo`,
       [String(nombre).trim(), t]
     );
-
     res.status(201).json(r.rows[0]);
   } catch (err: any) {
-    // unique violation
     if (err?.code === '23505') return res.status(409).json({ error: 'Marca ya existe para ese tipo' });
     console.error(err);
     res.status(500).json({ error: 'Error creando marca' });
   }
 });
 
-
-
-
-// Categorías
+// --- CATEGORÍAS ---
 router.get('/catalogs/categorias', async (_req, res) => {
   const r = await pool.query(`SELECT id_categoria, nombre FROM ${schema}.categoria ORDER BY nombre`);
   res.json(r.rows);
 });
 
-// Subcategorías (con su categoría)
+// --- SUBCATEGORÍAS ---
+// GET /catalogs/subcategorias
 router.get('/catalogs/subcategorias', async (_req, res) => {
   try {
     const sql = `
@@ -97,15 +76,40 @@ router.get('/catalogs/subcategorias', async (_req, res) => {
   }
 });
 
-// Áreas
+// POST /catalogs/subcategorias (NUEVO MÉTODO PARA TU BOTÓN)
+router.post('/catalogs/subcategorias', async (req: Request, res: Response) => {
+  try {
+    const { nombre, id_categoria } = req.body;
+
+    if (!nombre || !id_categoria) {
+      return res.status(400).json({ error: 'Falta nombre de subcategoría o id_categoria' });
+    }
+
+    const sql = `
+      INSERT INTO ${schema}.subcategoria (nombre, id_categoria)
+      VALUES ($1, $2)
+      RETURNING id_subcategoria, nombre, id_categoria
+    `;
+
+    const result = await pool.query(sql, [String(nombre).trim(), id_categoria]);
+
+    console.log(`✅ Subcategoría creada: ${nombre}`);
+    res.status(201).json(result.rows[0]);
+  } catch (err: any) {
+    if (err?.code === '23505') return res.status(409).json({ error: 'La subcategoría ya existe' });
+    if (err?.code === '23503') return res.status(400).json({ error: 'ID de categoría no válido' });
+    console.error(err);
+    res.status(500).json({ error: 'Error al crear la subcategoría' });
+  }
+});
+
+// --- ÁREAS ---
 router.get('/catalogs/areas', async (_req, res) => {
   const r = await pool.query(`SELECT id_area, nombre FROM ${schema}.area_municipal ORDER BY nombre`);
   res.json(r.rows);
 });
 
-// Usuarios
-// Usuarios (con su área)
-
+// --- USUARIOS ---
 router.get('/catalogs/usuarios', async (_req, res) => {
   try {
     const sql = `
@@ -128,23 +132,10 @@ router.get('/catalogs/usuarios', async (_req, res) => {
   }
 });
 
-
-
-// Modos de adquisición
-router.get('/catalogs/adquisiciones', async (_req, res) => {
-  const r = await pool.query(`SELECT id_adquisicion, nombre FROM ${schema}.modo_adquisicion ORDER BY nombre`);
-  res.json(r.rows);
-});
-
-
-
 router.post('/catalogs/usuarios', async (req, res) => {
   try {
     const { nombre, email, cargo = null, id_area = null } = req.body;
-
-    if (!nombre || !email) {
-      return res.status(400).json({ message: 'Faltan nombre o email' });
-    }
+    if (!nombre || !email) return res.status(400).json({ message: 'Faltan nombre o email' });
 
     const sql = `
       INSERT INTO ${schema}.usuario (nombre, email, cargo, id_area)
@@ -159,6 +150,12 @@ router.post('/catalogs/usuarios', async (req, res) => {
     if (err?.code === '23503') return res.status(400).json({ message: 'Área inválida' });
     res.status(500).json({ message: 'Error creando usuario' });
   }
+});
+
+// --- MODOS DE ADQUISICIÓN ---
+router.get('/catalogs/adquisiciones', async (_req, res) => {
+  const r = await pool.query(`SELECT id_adquisicion, nombre FROM ${schema}.modo_adquisicion ORDER BY nombre`);
+  res.json(r.rows);
 });
 
 export default router;

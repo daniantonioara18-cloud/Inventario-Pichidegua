@@ -15,13 +15,9 @@ export class ApiService {
   // ITEMS
   // ======================
 
-  getItems(){
+  getItems() {
     return this.http.get<any[]>(`${this.baseUrl}/items`);
   }
-
-  updateItem(id: number, data: any): Observable<any> {
-  return this.http.put(`${this.baseUrl}/items/${id}`, data);
-}
 
   getItemById(id: number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/items/${id}`);
@@ -29,6 +25,44 @@ export class ApiService {
 
   createItem(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/items`, data);
+  }
+
+  updateItem(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/items/${id}`, data);
+  }
+
+  asignarItem(id: number, data: any) {
+    return this.http.post(`${this.baseUrl}/items/${id}/asignar`, data);
+  }
+
+  moverIte(id: number, data: any) {
+    return this.http.post(`${this.baseUrl}/items/${id}/mover`, data);
+  }
+
+  // ======================
+  // IMPORTAR / EXPORTAR EXCEL
+  // ======================
+
+  /** Exporta todo el inventario a Excel */
+  exportarExcel(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/items/export`, { responseType: 'blob' });
+  }
+
+  /** Descarga plantilla vacía */
+  descargarPlantilla(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/items/plantilla`, { responseType: 'blob' });
+  }
+
+  /** Previsualiza archivo Excel antes de importar */
+  importarPreview(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/items/import-preview`, formData);
+  }
+
+  /** Importa items desde array de datos (después de preview) */
+  importarItems(items: any[]): Observable<any> {
+    return this.http.post(`${this.baseUrl}/items/import`, { items });
   }
 
   // ======================
@@ -53,47 +87,45 @@ export class ApiService {
   }
 
   createMarca(nombre: string, tipo: 'TECNO' | 'MUEBLE'): Observable<any> {
-  return this.http.post(`${this.baseUrl}/catalogs/marcas`, { nombre, tipo });
-}
-
-
-  asignarItem(id:number,data:any){
-    return this.http.post(`${this.baseUrl}/items/${id}/asignar`, data);
+    return this.http.post(`${this.baseUrl}/catalogs/marcas`, { nombre, tipo });
   }
 
-  moverIte(id:number,data:any){
-    return this.http.post(`${this.baseUrl}/items/${id}/mover`, data);
+  /** ✅ NUEVO: Crear subcategoría para el inventario de la muni */
+  createSubcategoria(nombre: string, id_categoria: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/catalogs/subcategorias`, { nombre, id_categoria });
   }
 
-getMovimientos(params?: { q?: string; tipo?: string; limit?: number; offset?: number }) {
-  const q = params?.q ? `q=${encodeURIComponent(params.q)}` : '';
-  const tipo = params?.tipo ? `tipo=${encodeURIComponent(params.tipo)}` : '';
-  const limit = params?.limit != null ? `limit=${params.limit}` : '';
-  const offset = params?.offset != null ? `offset=${params.offset}` : '';
+  // ======================
+  // USUARIOS
+  // ======================
 
-  const query = [q, tipo, limit, offset].filter(Boolean).join('&');
-  return this.http.get<any[]>(`${this.baseUrl}/movimientos${query ? '?' + query : ''}`);
-}
+  getUsuarios() {
+    return this.http.get<any[]>(`${this.baseUrl}/usuarios`);
+  }
 
+  createUsuario(data: any) {
+    return this.http.post(`${this.baseUrl}/usuarios`, data);
+  }
 
-getUsuarios() {
-  return this.http.get<any[]>(`${this.baseUrl}/usuarios`);
-}
+  updateUsuario(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/usuarios/${id}`, data);
+  }
 
-createUsuario(data: any) {
-  return this.http.post(`${this.baseUrl}/usuarios`, data);
-}
+  deleteUsuario(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/usuarios/${id}`);
+  }
 
-updateUsuario(id: number, data: any): Observable<any> {
-  return this.http.put(`${this.baseUrl}/usuarios/${id}`, data);
-}
+  // ======================
+  // MOVIMIENTOS
+  // ======================
 
+  getMovimientos(params?: { q?: string; tipo?: string; limit?: number; offset?: number }) {
+    const q = params?.q ? `q=${encodeURIComponent(params.q)}` : '';
+    const tipo = params?.tipo ? `tipo=${encodeURIComponent(params.tipo)}` : '';
+    const limit = params?.limit != null ? `limit=${params.limit}` : '';
+    const offset = params?.offset != null ? `offset=${params.offset}` : '';
 
-
-deleteUsuario(id: number): Observable<any> {
-  return this.http.delete(`${this.baseUrl}/usuarios/${id}`);
-}
-
-
-
+    const query = [q, tipo, limit, offset].filter(Boolean).join('&');
+    return this.http.get<any[]>(`${this.baseUrl}/movimientos${query ? '?' + query : ''}`);
+  }
 }

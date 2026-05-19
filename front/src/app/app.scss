@@ -1,0 +1,48 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden; /* Evita scroll en el body */
+}
+
+/* Navbar fijo arriba */
+.app-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 1000;
+}
+
+/* Sidebar fijo a la izquierda */
+.app-sidebar {
+  position: fixed;
+  top: 60px; /* Debajo del navbar */
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  z-index: 999;
+  overflow-y: auto; /* Scroll propio del sidebar si es muy largo */
+}
+
+/* Contenido con scroll */
+.content-area {
+  position: fixed;
+  top: 60px; /* Debajo del navbar */
+  left: 260px; /* A la derecha del sidebar */
+  right: 0;
+  bottom: 0;
+  overflow-y: auto; /* Solo el contenido hace scroll */
+  background: #f1f5f9;
+  padding: 1.5rem;
+}
+
+/* Login sin restricciones */
+:host {
+  display: block;
+}
